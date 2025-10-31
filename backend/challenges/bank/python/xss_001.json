@@ -1,0 +1,16 @@
+{
+  "id": "xss_001",
+  "title": "Unescaped Account Name",
+  "category": "cross_site_scripting",
+  "language": "python",
+  "description": "Transaction history renders the account nickname directly into HTML without encoding.",
+  "vulnerable_snippet": "nickname = request.args.get(\"nickname\", \"\")\nreturn HTMLResponse(f\"<h2>Welcome, {nickname}</h2>\")",
+  "acceptance_criteria": [
+    "User-controlled data must be escaped or sanitized before rendering.",
+    "The fix must preserve support for legitimate nicknames."
+  ],
+  "hints": [
+    "Use the templating engine's built-in auto-escaping features.",
+    "If rendering manually, rely on an escaping helper before interpolation."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "command_injection_001",
+  "title": "Verbose Backup CLI",
+  "category": "command_injection",
+  "language": "python",
+  "description": "The nightly backup script shells out to tar with unsanitized file names received from the API.",
+  "vulnerable_snippet": "archive_name = request.json[\"archive\"]\nos.system(f\"tar -czf {archive_name}.tar.gz /data/customer\")",
+  "acceptance_criteria": [
+    "Do not pass raw user input to shell commands.",
+    "Prefer using subprocess with argument lists and validation.",
+    "Reject or sanitize archive names that contain unsafe characters."
+  ],
+  "hints": [
+    "Consider using pathlib for validation.",
+    "Switch to subprocess.run with a list instead of os.system."
+  ]
+}

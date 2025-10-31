@@ -1,0 +1,17 @@
+{
+  "id": "sqli_001",
+  "title": "Unsafe Login Query",
+  "category": "sql_injection",
+  "language": "python",
+  "description": "The banking portal concatenates raw user input into the SQL query that checks credentials.",
+  "vulnerable_snippet": "username = request.json[\"username\"]\npassword = request.json[\"password\"]\nquery = f\"SELECT id FROM users WHERE username = '{username}' AND password = '{password}'\"\nreturn db.execute(query).fetchone()",
+  "acceptance_criteria": [
+    "User input must not be concatenated into SQL statements.",
+    "Prepared statements or safe query builders must be used.",
+    "The query must still authenticate valid users."
+  ],
+  "hints": [
+    "Use parameterized queries instead of string interpolation.",
+    "Review how SQLAlchemy handles bound parameters."
+  ]
+}
