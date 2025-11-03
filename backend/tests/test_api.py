@@ -20,7 +20,9 @@ def test_create_submission(client):
 
     data = response.json()
     assert data["challenge_slug"] == submission_payload["challenge_slug"]
-    assert data["status"] == "pending"
+    assert data["status"] in {"pending", "failed", "passed"}
+    if data["status"] in {"failed", "passed"}:
+        assert data["score"] is not None
     assert data["feedback"]
 
     list_response = client.get(

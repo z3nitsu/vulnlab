@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from typing import Protocol, Sequence
+from typing import Callable, Protocol, Sequence
 
 from ..models import Submission
 from ..types import SubmissionStatus
@@ -33,11 +34,7 @@ class SandboxExecutor(Protocol):
 
 
 class ChallengeScoringService:
-    """Orchestrates scoring for a submission.
-
-    This is a stub that currently marks submissions as pending. In future
-    iterations it will invoke static analyzers and sandbox execution.
-    """
+    """Orchestrates scoring for a submission using lightweight heuristics."""
 
     def __init__(
         self,
@@ -46,12 +43,107 @@ class ChallengeScoringService:
     ) -> None:
         self.analyzers = analyzers or []
         self.sandbox = sandbox
+        self._heuristics: dict[str, Callable[[Submission], ScoringResult]] = {
+            "sqli_001": self._score_sqli_001,
+            "xss_001": self._score_xss_001,
+            "command_injection_001": self._score_command_injection_001,
+        }
 
     def score(self, submission: Submission) -> ScoringResult:
-        # Placeholder until analyzers and sandbox integration are implemented.
+        issues: list[AnalysisIssue] = []
+        for analyzer in self.analyzers:
+            issues.extend(analyzer.analyze(submission))
+
+        heuristic = self._heuristics.get(submission.challenge_slug)
+        if heuristic:
+            result = heuristic(submission)
+            result.issues = issues or result.issues
+            return result
+
         return ScoringResult(
             status=SubmissionStatus.pending,
-            score=None,
-            feedback="Scoring pending – analysis pipeline not yet implemented.",
-            issues=[],
+            feedback="No heuristic available for this challenge yet.",
+            issues=issues,
+        )
+
+    # --- Heuristic scoring helpers -------------------------------------------------
+
+    def _score_sqli_001(self, submission: Submission) -> ScoringResult:
+        code = submission.code
+        lowered = code.lower()
+        uses_parameterization = bool(
+            re.search(r"execute\s*\(\s*[^,]+,\s*\{", code)
+            or "bindparam" in lowered
+            or "?" in code
+            or re.search(r":\w+", code)
+        )
+        unsafe_concatenation = bool(
+            re.search(r"['\"]\s*\+\s*[a-zA-Z_]", code)
+            or "format(" in lowered
+            or re.search(r"\bf['\"]", code)
+        )
+
+        if uses_parameterization and not unsafe_concatenation:
+            return ScoringResult(
+                status=SubmissionStatus.passed,
+                score=100,
+                feedback="Detected parameterized query usage without direct string concatenation.",
+            )
+
+        return ScoringResult(
+            status=SubmissionStatus.failed,
+            score=20 if uses_parameterization else 0,
+            feedback="Did not detect safe parameterized SQL usage; avoid concatenating user input.",
+        )
+
+    def _score_xss_001(self, submission: Submission) -> ScoringResult:
+        lowered = submission.code.lower()
+        uses_escape = any(
+            token in lowered
+            for token in [
+                "html.escape",
+                "markupsafe.escape",
+                "jinja2.escape",
+                "escape_html",
+            ]
+        )
+        uses_sanitizer = "bleach.clean" in lowered or "sanitize" in lowered
+
+        if uses_escape or uses_sanitizer:
+            return ScoringResult(
+                status=SubmissionStatus.passed,
+                score=100,
+                feedback="Detected HTML escaping or sanitization before rendering.",
+            )
+
+        return ScoringResult(
+            status=SubmissionStatus.failed,
+            score=0,
+            feedback="No escaping or sanitization detected; output remains vulnerable to XSS.",
+        )
+
+    def _score_command_injection_001(self, submission: Submission) -> ScoringResult:
+        lowered = submission.code.lower()
+        uses_subprocess = "subprocess.run" in lowered or "subprocess.check_call" in lowered
+        shell_true = "shell=true" in lowered
+        still_uses_os_system = "os.system" in lowered
+
+        if uses_subprocess and not shell_true and not still_uses_os_system:
+            return ScoringResult(
+                status=SubmissionStatus.passed,
+                score=100,
+                feedback="Detected safe subprocess usage without shell=True or os.system.",
+            )
+
+        if still_uses_os_system or shell_true:
+            return ScoringResult(
+                status=SubmissionStatus.failed,
+                score=0,
+                feedback="Shell execution still present; switch to subprocess without shell=True.",
+            )
+
+        return ScoringResult(
+            status=SubmissionStatus.failed,
+            score=20 if uses_subprocess else 0,
+            feedback="No evidence of safe subprocess usage; ensure commands avoid shell execution.",
         )
