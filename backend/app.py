@@ -12,10 +12,12 @@ from .schemas import (
     SubmissionCreate,
     SubmissionOut,
 )
+from .services.scoring import ChallengeScoringService
 
 
 def create_app(settings: Settings) -> FastAPI:
     app = FastAPI(title=settings.app_name, debug=settings.debug)
+    app.state.scoring_service = ChallengeScoringService()
 
     @app.get("/health", tags=["system"])
     async def health() -> JSONResponse:
@@ -69,6 +71,16 @@ def create_app(settings: Settings) -> FastAPI:
         session.add(submission)
         session.commit()
         session.refresh(submission)
+
+        scoring_service: ChallengeScoringService = app.state.scoring_service
+        result = scoring_service.score(submission)
+        submission.status = result.status
+        submission.score = result.score
+        submission.feedback = result.feedback
+        session.add(submission)
+        session.commit()
+        session.refresh(submission)
+
         return SubmissionOut.model_validate(submission)
 
     return app
