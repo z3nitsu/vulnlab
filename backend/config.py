@@ -22,6 +22,10 @@ class Settings(BaseSettings):
         / "static_analysis"
         / "semgrep"
     )
+    bandit_binary: str = Field(default="bandit")
+    bandit_timeout_seconds: int = Field(default=10)
+    bandit_severity: str = Field(default="LOW")
+    bandit_confidence: str = Field(default="LOW")
 
     model_config = {
         "env_prefix": "VULNLABS_",

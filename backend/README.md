@@ -31,15 +31,20 @@
 | `VULNLABS_DATABASE_URL` | SQLite file under `backend/data` | Connection string for persistence layer. |
 | `VULNLABS_LOG_LEVEL` | `INFO` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, etc.). |
 | `VULNLABS_SEMGREP_RULES_ROOT` | `backend/static_analysis/semgrep` | Location of Semgrep rule packs. |
+| `VULNLABS_BANDIT_BINARY` | `bandit` | Path to Bandit CLI. |
+| `VULNLABS_BANDIT_TIMEOUT_SECONDS` | `10` | Max execution time for Bandit runs. |
+| `VULNLABS_BANDIT_SEVERITY` | `LOW` | Minimum severity Bandit should report. |
+| `VULNLABS_BANDIT_CONFIDENCE` | `LOW` | Minimum confidence Bandit should report. |
 
 ## Scoring Heuristics (Current)
 
-The interim scoring service combines lightweight heuristics with optional Semgrep findings:
+The interim scoring service combines lightweight heuristics with optional Semgrep/Bandit findings:
 
 - `sqli_001`: looks for parameterized SQL usage and absence of string concatenation.
 - `xss_001`: expects HTML escaping or sanitization helpers.
 - `command_injection_001`: prefers `subprocess` calls without `shell=True` or `os.system`.
 - Semgrep rules (if the `semgrep` CLI is installed) add additional warnings to the submission feedback payload.
+- Bandit (if installed) runs against snippets to surface Python security issues with severity/confidence thresholds.
 
 Submissions failing these checks are marked `failed` with feedback; other challenges remain `pending` until expanded analyzers are introduced. When Semgrep matches fire, the submission response includes an `issues` array with tool/severity/message details.
 

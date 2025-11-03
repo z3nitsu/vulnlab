@@ -17,7 +17,7 @@ from .schemas import (
     SubmissionCreate,
     SubmissionOut,
 )
-from .services.analyzers import SemgrepAnalyzer
+from .services.analyzers import BanditAnalyzer, SemgrepAnalyzer
 from .services.scoring import ChallengeScoringService
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,15 @@ def create_app(settings: Settings) -> FastAPI:
         settings.semgrep_rules_root / "python" / "xss_unescaped.yaml",
         settings.semgrep_rules_root / "python" / "command_injection.yaml",
     ]
-    analyzers = [SemgrepAnalyzer(semgrep_rules)]
+    analyzers = [
+        SemgrepAnalyzer(semgrep_rules),
+        BanditAnalyzer(
+            binary=settings.bandit_binary,
+            timeout_seconds=settings.bandit_timeout_seconds,
+            severity=settings.bandit_severity,
+            confidence=settings.bandit_confidence,
+        ),
+    ]
 
     app.state.scoring_service = ChallengeScoringService(analyzers=analyzers)
 
