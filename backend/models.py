@@ -57,6 +57,7 @@ class Submission(Base):
     )
     score: Mapped[Optional[int]] = mapped_column()
     feedback: Mapped[Optional[str]] = mapped_column(Text)
+    analysis_report: Mapped[Optional[List[dict]]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )

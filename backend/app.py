@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .config import Settings, get_settings
 from .db import get_session
+from .db_init import init_db
 from .logging import configure_logging
 from .models import Challenge, Submission
 from .schemas import (
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings) -> FastAPI:
     configure_logging(settings)
+    init_db(settings)
     app = FastAPI(title=settings.app_name, debug=settings.debug)
 
     semgrep_rules = [
@@ -99,6 +101,14 @@ def create_app(settings: Settings) -> FastAPI:
         submission.status = result.status
         submission.score = result.score
         submission.feedback = result.feedback
+        submission.analysis_report = [
+            {
+                "tool": issue.tool,
+                "message": issue.message,
+                "severity": issue.severity,
+            }
+            for issue in result.issues or []
+        ]
         session.add(submission)
         session.commit()
         session.refresh(submission)
@@ -109,18 +119,7 @@ def create_app(settings: Settings) -> FastAPI:
             submission.status.value,
         )
 
-        submission_dict = SubmissionOut.model_validate(submission).model_dump()
-        submission_dict["issues"] = [
-            AnalysisIssueOut.model_validate(
-                {
-                    "tool": issue.tool,
-                    "message": issue.message,
-                    "severity": issue.severity,
-                }
-            )
-            for issue in result.issues or []
-        ]
-        return SubmissionOut(**submission_dict)
+        return SubmissionOut.model_validate(submission)
 
     @app.get(
         "/submissions",

@@ -52,8 +52,10 @@ class SubmissionOut(BaseModel):
     status: SubmissionStatus
     score: Optional[int]
     feedback: Optional[str]
-    issues: Optional[List[AnalysisIssueOut]] = None
+    issues: Optional[List[AnalysisIssueOut]] = Field(
+        default=None, alias="analysis_report", serialization_alias="issues"
+    )
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

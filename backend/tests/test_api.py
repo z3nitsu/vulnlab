@@ -31,4 +31,5 @@ def test_create_submission(client):
     )
     assert list_response.status_code == 200
     submissions = list_response.json()
-    assert any(item["id"] == data["id"] for item in submissions)
+    matching = next(item for item in submissions if item["id"] == data["id"])
+    assert isinstance(matching["issues"], list)

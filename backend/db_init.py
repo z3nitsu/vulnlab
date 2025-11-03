@@ -18,6 +18,7 @@ def init_db(settings: Settings) -> None:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
     Base.metadata.create_all(bind=engine)
+    _ensure_analysis_column()
     seed_challenges(settings.challenge_root)
 
 
@@ -50,6 +51,21 @@ def _upsert_challenge(session: Session, payload: dict) -> None:
             setattr(existing, key, value)
     else:
         session.add(Challenge(**payload))
+
+
+def _ensure_analysis_column() -> None:
+    if engine.dialect.name != "sqlite":
+        return
+
+    with engine.begin() as connection:
+        columns = {
+            row[1]
+            for row in connection.exec_driver_sql("PRAGMA table_info(submissions);")
+        }
+        if "analysis_report" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE submissions ADD COLUMN analysis_report JSON"
+            )
 
 
 if __name__ == "__main__":
