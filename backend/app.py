@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
@@ -5,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .config import Settings, get_settings
 from .db import get_session
+from .logging import configure_logging
 from .models import Challenge, Submission
 from .schemas import (
     ChallengeOut,
@@ -14,8 +17,11 @@ from .schemas import (
 )
 from .services.scoring import ChallengeScoringService
 
+logger = logging.getLogger(__name__)
+
 
 def create_app(settings: Settings) -> FastAPI:
+    configure_logging(settings)
     app = FastAPI(title=settings.app_name, debug=settings.debug)
     app.state.scoring_service = ChallengeScoringService()
 
@@ -63,6 +69,12 @@ def create_app(settings: Settings) -> FastAPI:
         if not challenge:
             raise HTTPException(status_code=404, detail="Challenge not found")
 
+        logger.info(
+            "Received submission for challenge=%s user=%s",
+            payload.challenge_slug,
+            payload.user_handle or "anonymous",
+        )
+
         submission = Submission(
             challenge_slug=payload.challenge_slug,
             code=payload.code,
@@ -80,6 +92,12 @@ def create_app(settings: Settings) -> FastAPI:
         session.add(submission)
         session.commit()
         session.refresh(submission)
+
+        logger.info(
+            "Submission scored id=%s status=%s",
+            submission.id,
+            submission.status.value,
+        )
 
         return SubmissionOut.model_validate(submission)
 

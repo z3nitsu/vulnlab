@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     challenge_root: Path = Field(
         default=Path(__file__).resolve().parent / "challenges"
     )
+    log_level: str = Field(default="INFO")
 
     model_config = {
         "env_prefix": "VULNLABS_",
