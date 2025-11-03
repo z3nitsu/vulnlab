@@ -18,6 +18,9 @@ def client(tmp_path, monkeypatch) -> TestClient:
     # Reload modules that depend on settings to pick up the test configuration.
     import backend.db as db_module
     importlib.reload(db_module)
+    import sys
+    sys.modules.pop("backend.models", None)
+    import backend.models as models_module
     import backend.db_init as db_init
     importlib.reload(db_init)
 
