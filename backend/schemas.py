@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from .types import SubmissionStatus
 
 
 class ChallengeOut(BaseModel):
@@ -26,5 +28,25 @@ class ChallengeSummary(BaseModel):
     title: str
     category: str
     language: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubmissionCreate(BaseModel):
+    challenge_slug: str
+    code: str = Field(min_length=1)
+    user_handle: Optional[str] = Field(default=None, max_length=64)
+
+
+class SubmissionOut(BaseModel):
+    id: str
+    challenge_slug: str
+    user_handle: Optional[str]
+    code: str
+    status: SubmissionStatus
+    score: Optional[int]
+    feedback: Optional[str]
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

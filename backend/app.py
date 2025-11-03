@@ -1,12 +1,17 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import Settings, get_settings
 from .db import get_session
-from .models import Challenge
-from .schemas import ChallengeOut, ChallengeSummary
+from .models import Challenge, Submission
+from .schemas import (
+    ChallengeOut,
+    ChallengeSummary,
+    SubmissionCreate,
+    SubmissionOut,
+)
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -41,6 +46,30 @@ def create_app(settings: Settings) -> FastAPI:
         if not challenge:
             raise HTTPException(status_code=404, detail="Challenge not found")
         return ChallengeOut.model_validate(challenge)
+
+    @app.post(
+        "/submissions",
+        response_model=SubmissionOut,
+        status_code=status.HTTP_201_CREATED,
+        tags=["submissions"],
+    )
+    async def create_submission(
+        payload: SubmissionCreate,
+        session: Session = Depends(get_session),
+    ) -> SubmissionOut:
+        challenge = session.get(Challenge, payload.challenge_slug)
+        if not challenge:
+            raise HTTPException(status_code=404, detail="Challenge not found")
+
+        submission = Submission(
+            challenge_slug=payload.challenge_slug,
+            code=payload.code,
+            user_handle=payload.user_handle,
+        )
+        session.add(submission)
+        session.commit()
+        session.refresh(submission)
+        return SubmissionOut.model_validate(submission)
 
     return app
 
