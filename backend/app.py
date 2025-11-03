@@ -1,10 +1,15 @@
 import logging
+try:  # Starlette expects python_multipart import to register namespace; keep optional.
+    import python_multipart  # noqa: F401
+except ImportError:
+    python_multipart = None  # type: ignore[assignment]
 from decimal import Decimal
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from fastapi.security import APIKeyHeader
 
 from .config import Settings, get_settings
 from .db import get_session
@@ -30,6 +35,7 @@ def create_app(settings: Settings) -> FastAPI:
     configure_logging(settings)
     init_db(settings)
     app = FastAPI(title=settings.app_name, debug=settings.debug)
+    api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
     semgrep_rules = [
         settings.semgrep_rules_root / "python" / "sqli_unsafe.yaml",
@@ -47,6 +53,12 @@ def create_app(settings: Settings) -> FastAPI:
     ]
 
     app.state.scoring_service = ChallengeScoringService(analyzers=analyzers)
+
+    def verify_api_key(provided_key: str | None = Security(api_key_header)) -> None:
+        if not settings.api_key:
+            return
+        if not provided_key or provided_key != settings.api_key:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
     @app.get("/health", tags=["system"])
     async def health() -> JSONResponse:
@@ -87,6 +99,7 @@ def create_app(settings: Settings) -> FastAPI:
     async def create_submission(
         payload: SubmissionCreate,
         session: Session = Depends(get_session),
+        _: None = Depends(verify_api_key),
     ) -> SubmissionOut:
         challenge = session.get(Challenge, payload.challenge_slug)
         if not challenge:
@@ -169,6 +182,7 @@ def create_app(settings: Settings) -> FastAPI:
     async def rescore_submission(
         submission_id: str,
         session: Session = Depends(get_session),
+        _: None = Depends(verify_api_key),
     ) -> SubmissionOut:
         submission = session.get(Submission, submission_id)
         if not submission:

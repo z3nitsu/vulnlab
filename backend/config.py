@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     bandit_timeout_seconds: int = Field(default=10)
     bandit_severity: str = Field(default="LOW")
     bandit_confidence: str = Field(default="LOW")
+    api_key: str | None = Field(default=None)
 
     model_config = {
         "env_prefix": "VULNLABS_",

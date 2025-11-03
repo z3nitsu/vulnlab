@@ -3,6 +3,13 @@ from __future__ import annotations
 import importlib
 import pytest
 from fastapi.testclient import TestClient
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message="Please use `import python_multipart` instead.",
+    category=PendingDeprecationWarning,
+)
 
 
 @pytest.fixture()
@@ -10,6 +17,7 @@ def client(tmp_path, monkeypatch) -> TestClient:
     db_path = tmp_path / "test.db"
     monkeypatch.setenv("VULNLABS_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("VULNLABS_LOG_LEVEL", "CRITICAL")
+    monkeypatch.setenv("VULNLABS_API_KEY", "test-key")
 
     from backend import config
 
@@ -33,4 +41,5 @@ def client(tmp_path, monkeypatch) -> TestClient:
     app = app_module.create_app(settings)
 
     with TestClient(app) as test_client:
+        test_client.headers.update({"X-API-Key": "test-key"})
         yield test_client

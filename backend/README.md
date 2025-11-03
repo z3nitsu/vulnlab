@@ -8,7 +8,7 @@
 - [x] Implement basic heuristic scoring for initial challenges.
 - [ ] Implement full scoring workflow (static analysis + sandbox execution).
   - Current heuristics act as lightweight guards until full pipeline lands.
-- [ ] Integrate static analysis (Semgrep/Bandit) pipeline for submission scoring.
+- [x] Integrate static analysis (Semgrep/Bandit) pipeline for submission scoring.
 - [ ] Wire optional container sandbox execution flow.
 - [ ] Add automated tests covering challenge retrieval and scoring logic.
 
@@ -36,6 +36,9 @@
 | `VULNLABS_BANDIT_TIMEOUT_SECONDS` | `10` | Max execution time for Bandit runs. |
 | `VULNLABS_BANDIT_SEVERITY` | `LOW` | Minimum severity Bandit should report. |
 | `VULNLABS_BANDIT_CONFIDENCE` | `LOW` | Minimum confidence Bandit should report. |
+| `VULNLABS_API_KEY` | unset | When provided, POST endpoints require `X-API-Key` to match. |
+
+All POST endpoints expect the `X-API-Key` header when an API key is configured.
 
 ## Scoring Heuristics (Current)
 
