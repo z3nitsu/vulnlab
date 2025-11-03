@@ -1,0 +1,6 @@
+rules:
+  - id: vulnlabs-command-injection
+    message: "Potential command injection: os.system used with user input."
+    languages: [python]
+    severity: ERROR
+    pattern: os.system(...)

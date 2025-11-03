@@ -1,0 +1,15 @@
+rules:
+  - id: vulnlabs-sqli-unsafe-concat
+    message: "Potential SQL injection: string formatting or concatenation detected in query construction."
+    languages: [python]
+    severity: WARNING
+    patterns:
+      - pattern-inside: |
+          $QUERY = $FUNC(...)
+      - pattern-either:
+          - pattern: |
+              "...${VAR}..."
+          - pattern: |
+              $X + $Y
+          - pattern: |
+              $X.format(...)

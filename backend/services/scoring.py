@@ -57,14 +57,25 @@ class ChallengeScoringService:
         heuristic = self._heuristics.get(submission.challenge_slug)
         if heuristic:
             result = heuristic(submission)
-            result.issues = issues or result.issues
-            return result
+        else:
+            result = ScoringResult(
+                status=SubmissionStatus.pending,
+                feedback="No heuristic available for this challenge yet.",
+            )
 
-        return ScoringResult(
-            status=SubmissionStatus.pending,
-            feedback="No heuristic available for this challenge yet.",
-            issues=issues,
-        )
+        if issues:
+            result.issues = issues
+            rendered = "\n".join(
+                f"- [{issue.severity.upper()}] {issue.message}" for issue in issues
+            )
+            prefix = "Static analysis findings:\n"
+            result.feedback = (
+                f"{result.feedback}\n\n{prefix}{rendered}"
+                if result.feedback
+                else f"{prefix}{rendered}"
+            )
+
+        return result
 
     # --- Heuristic scoring helpers -------------------------------------------------
 

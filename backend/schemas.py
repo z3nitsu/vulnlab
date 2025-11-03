@@ -38,6 +38,12 @@ class SubmissionCreate(BaseModel):
     user_handle: Optional[str] = Field(default=None, max_length=64)
 
 
+class AnalysisIssueOut(BaseModel):
+    tool: str
+    message: str
+    severity: str
+
+
 class SubmissionOut(BaseModel):
     id: str
     challenge_slug: str
@@ -46,6 +52,7 @@ class SubmissionOut(BaseModel):
     status: SubmissionStatus
     score: Optional[int]
     feedback: Optional[str]
+    issues: Optional[List[AnalysisIssueOut]] = None
     created_at: datetime
     updated_at: datetime
 

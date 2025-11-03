@@ -1,0 +1,8 @@
+rules:
+  - id: vulnlabs-xss-unescaped-response
+    message: "Possible XSS: response renders unescaped user input."
+    languages: [python]
+    severity: WARNING
+    patterns:
+      - pattern: |
+          HTMLResponse(f"...")

@@ -17,6 +17,11 @@ class Settings(BaseSettings):
         default=Path(__file__).resolve().parent / "challenges"
     )
     log_level: str = Field(default="INFO")
+    semgrep_rules_root: Path = Field(
+        default=Path(__file__).resolve().parent
+        / "static_analysis"
+        / "semgrep"
+    )
 
     model_config = {
         "env_prefix": "VULNLABS_",

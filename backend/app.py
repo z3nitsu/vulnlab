@@ -10,11 +10,13 @@ from .db import get_session
 from .logging import configure_logging
 from .models import Challenge, Submission
 from .schemas import (
+    AnalysisIssueOut,
     ChallengeOut,
     ChallengeSummary,
     SubmissionCreate,
     SubmissionOut,
 )
+from .services.analyzers import SemgrepAnalyzer
 from .services.scoring import ChallengeScoringService
 
 logger = logging.getLogger(__name__)
@@ -23,7 +25,15 @@ logger = logging.getLogger(__name__)
 def create_app(settings: Settings) -> FastAPI:
     configure_logging(settings)
     app = FastAPI(title=settings.app_name, debug=settings.debug)
-    app.state.scoring_service = ChallengeScoringService()
+
+    semgrep_rules = [
+        settings.semgrep_rules_root / "python" / "sqli_unsafe.yaml",
+        settings.semgrep_rules_root / "python" / "xss_unescaped.yaml",
+        settings.semgrep_rules_root / "python" / "command_injection.yaml",
+    ]
+    analyzers = [SemgrepAnalyzer(semgrep_rules)]
+
+    app.state.scoring_service = ChallengeScoringService(analyzers=analyzers)
 
     @app.get("/health", tags=["system"])
     async def health() -> JSONResponse:
@@ -99,7 +109,18 @@ def create_app(settings: Settings) -> FastAPI:
             submission.status.value,
         )
 
-        return SubmissionOut.model_validate(submission)
+        submission_dict = SubmissionOut.model_validate(submission).model_dump()
+        submission_dict["issues"] = [
+            AnalysisIssueOut.model_validate(
+                {
+                    "tool": issue.tool,
+                    "message": issue.message,
+                    "severity": issue.severity,
+                }
+            )
+            for issue in result.issues or []
+        ]
+        return SubmissionOut(**submission_dict)
 
     @app.get(
         "/submissions",

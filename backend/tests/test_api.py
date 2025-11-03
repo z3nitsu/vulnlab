@@ -24,6 +24,7 @@ def test_create_submission(client):
     if data["status"] in {"failed", "passed"}:
         assert data["score"] is not None
     assert data["feedback"]
+    assert isinstance(data["issues"], list)
 
     list_response = client.get(
         "/submissions", params={"challenge_slug": submission_payload["challenge_slug"]}
