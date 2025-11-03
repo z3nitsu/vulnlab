@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -81,6 +81,35 @@ def create_app(settings: Settings) -> FastAPI:
         session.commit()
         session.refresh(submission)
 
+        return SubmissionOut.model_validate(submission)
+
+    @app.get(
+        "/submissions",
+        response_model=list[SubmissionOut],
+        tags=["submissions"],
+    )
+    async def list_submissions(
+        challenge_slug: str | None = Query(default=None),
+        session: Session = Depends(get_session),
+    ) -> list[SubmissionOut]:
+        stmt = select(Submission).order_by(Submission.created_at.desc())
+        if challenge_slug:
+            stmt = stmt.where(Submission.challenge_slug == challenge_slug)
+        submissions = session.execute(stmt).scalars().all()
+        return [SubmissionOut.model_validate(item) for item in submissions]
+
+    @app.get(
+        "/submissions/{submission_id}",
+        response_model=SubmissionOut,
+        tags=["submissions"],
+    )
+    async def get_submission(
+        submission_id: str,
+        session: Session = Depends(get_session),
+    ) -> SubmissionOut:
+        submission = session.get(Submission, submission_id)
+        if not submission:
+            raise HTTPException(status_code=404, detail="Submission not found")
         return SubmissionOut.model_validate(submission)
 
     return app
