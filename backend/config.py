@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     docker_image: str = Field(default="python:3.11-slim")
     docker_memory_limit: str = Field(default="128m")
     docker_cpu_shares: int = Field(default=256)
+    cors_allow_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+        ]
+    )
 
     model_config = {
         "env_prefix": "VULNLABS_",

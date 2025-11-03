@@ -8,6 +8,7 @@ from decimal import Decimal
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -47,6 +48,14 @@ def create_app(settings: Settings) -> FastAPI:
             app.state.scoring_worker.stop()
 
     app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allow_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
     semgrep_rules = [

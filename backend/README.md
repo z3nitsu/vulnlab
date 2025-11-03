@@ -40,6 +40,12 @@
 | `VULNLABS_API_KEY` | unset | When provided, POST endpoints require `X-API-Key` to match. |
 | `VULNLABS_SANDBOX_TIMEOUT_SECONDS` | `5` | Max time allowed for sandbox compilation run. |
 | `VULNLABS_PYTHON_EXECUTABLE` | `python3` | Interpreter used by the sandbox executor. |
+| `VULNLABS_SANDBOX_DRIVER` | `local` | Set to `docker` to run sandbox checks inside containers. |
+| `VULNLABS_DOCKER_BINARY` | `docker` | Docker CLI binary path used by the sandbox. |
+| `VULNLABS_DOCKER_IMAGE` | `python:3.11-slim` | Container image used for sandbox compilation. |
+| `VULNLABS_DOCKER_MEMORY_LIMIT` | `128m` | Memory limit passed to Docker containers. |
+| `VULNLABS_DOCKER_CPU_SHARES` | `256` | CPU share weight for Docker containers. |
+| `VULNLABS_CORS_ALLOW_ORIGINS` | `http://127.0.0.1:5173,http://localhost:5173` | Comma-separated origins allowed by CORS middleware. |
 
 All POST endpoints expect the `X-API-Key` header when an API key is configured.
 
