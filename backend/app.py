@@ -5,6 +5,8 @@ except ImportError:
     python_multipart = None  # type: ignore[assignment]
 from decimal import Decimal
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
@@ -16,8 +18,8 @@ from .db import get_session
 from .db_init import init_db
 from .logging import configure_logging
 from .models import Challenge, Submission
+from .types import SubmissionStatus
 from .schemas import (
-    AnalysisIssueOut,
     ChallengeOut,
     ChallengeSummary,
     StatusCount,
@@ -26,7 +28,9 @@ from .schemas import (
     SubmissionStats,
 )
 from .services.analyzers import BanditAnalyzer, SemgrepAnalyzer
+from .services.sandbox import LocalSandboxExecutor
 from .services.scoring import ChallengeScoringService
+from .services.worker import ScoringWorker
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,15 @@ logger = logging.getLogger(__name__)
 def create_app(settings: Settings) -> FastAPI:
     configure_logging(settings)
     init_db(settings)
-    app = FastAPI(title=settings.app_name, debug=settings.debug)
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        app.state.scoring_worker.start()
+        try:
+            yield
+        finally:
+            app.state.scoring_worker.stop()
+
+    app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
     api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
     semgrep_rules = [
@@ -52,7 +64,12 @@ def create_app(settings: Settings) -> FastAPI:
         ),
     ]
 
-    app.state.scoring_service = ChallengeScoringService(analyzers=analyzers)
+    sandbox_executor = LocalSandboxExecutor()
+
+    app.state.scoring_service = ChallengeScoringService(
+        analyzers=analyzers, sandbox=sandbox_executor
+    )
+    app.state.scoring_worker = ScoringWorker(app.state.scoring_service)
 
     def verify_api_key(provided_key: str | None = Security(api_key_header)) -> None:
         if not settings.api_key:
@@ -120,28 +137,8 @@ def create_app(settings: Settings) -> FastAPI:
         session.commit()
         session.refresh(submission)
 
-        scoring_service: ChallengeScoringService = app.state.scoring_service
-        result = scoring_service.score(submission)
-        submission.status = result.status
-        submission.score = result.score
-        submission.feedback = result.feedback
-        submission.analysis_report = [
-            {
-                "tool": issue.tool,
-                "message": issue.message,
-                "severity": issue.severity,
-            }
-            for issue in result.issues or []
-        ]
-        session.add(submission)
-        session.commit()
-        session.refresh(submission)
-
-        logger.info(
-            "Submission scored id=%s status=%s",
-            submission.id,
-            submission.status.value,
-        )
+        app.state.scoring_worker.enqueue(submission.id)
+        logger.info("Submission queued for scoring id=%s", submission.id)
 
         return SubmissionOut.model_validate(submission)
 
@@ -152,11 +149,14 @@ def create_app(settings: Settings) -> FastAPI:
     )
     async def list_submissions(
         challenge_slug: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
         session: Session = Depends(get_session),
     ) -> list[SubmissionOut]:
         stmt = select(Submission).order_by(Submission.created_at.desc())
         if challenge_slug:
             stmt = stmt.where(Submission.challenge_slug == challenge_slug)
+        stmt = stmt.offset(offset).limit(limit)
         submissions = session.execute(stmt).scalars().all()
         return [SubmissionOut.model_validate(item) for item in submissions]
 
@@ -188,28 +188,17 @@ def create_app(settings: Settings) -> FastAPI:
         if not submission:
             raise HTTPException(status_code=404, detail="Submission not found")
 
-        scoring_service: ChallengeScoringService = app.state.scoring_service
-        result = scoring_service.score(submission)
-        submission.status = result.status
-        submission.score = result.score
-        submission.feedback = result.feedback
-        submission.analysis_report = [
-            {
-                "tool": issue.tool,
-                "message": issue.message,
-                "severity": issue.severity,
-            }
-            for issue in result.issues or []
-        ]
+        submission.status = SubmissionStatus.pending
+        submission.score = None
+        submission.feedback = None
+        submission.analysis_report = []
         session.add(submission)
         session.commit()
         session.refresh(submission)
 
-        logger.info(
-            "Submission rescored id=%s status=%s",
-            submission.id,
-            submission.status.value,
-        )
+        app.state.scoring_worker.enqueue(submission.id)
+
+        logger.info("Submission enqueued for rescoring id=%s", submission.id)
 
         return SubmissionOut.model_validate(submission)
 

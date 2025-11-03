@@ -20,9 +20,10 @@
 | GET | `/challenges` | List challenges. |
 | GET | `/challenges/{slug}` | Retrieve challenge detail. |
 | POST | `/submissions` | Submit a fix attempt (heuristics run immediately). |
-| GET | `/submissions` | List submissions; optional `challenge_slug` filter. |
+| GET | `/submissions` | List submissions; supports `challenge_slug`, `limit`, `offset` filters. |
 | GET | `/submissions/{submission_id}` | Fetch a submission by id. |
 | POST | `/submissions/{submission_id}/rescore` | Re-run scoring using the latest analyzers. |
+| GET | `/stats/submissions` | Aggregate submission metrics (total, averages, per-status counts). |
 
 ## Configuration
 
@@ -42,13 +43,18 @@ All POST endpoints expect the `X-API-Key` header when an API key is configured.
 
 ## Scoring Heuristics (Current)
 
-The interim scoring service combines lightweight heuristics with optional Semgrep/Bandit findings:
+The scoring pipeline now runs asynchronously in the background. Submissions are queued, marked as `pending`, and processed by a worker that applies heuristics, Semgrep/Bandit findings, and a lightweight sandbox stub before persisting the results.
+
+- Background worker: processes queued submissions and updates their status (`pending` → `running` → `passed/failed/error`).
+- Semgrep rules (if the `semgrep` CLI is installed) add additional warnings to the submission feedback payload.
+- Bandit (if installed) runs against snippets to surface Python security issues with severity/confidence thresholds.
+- Sandbox stub detects obviously dangerous operations (e.g., `os.system`) and will be replaced by a containerised executor later on.
+
+Heuristic checks currently look for:
 
 - `sqli_001`: looks for parameterized SQL usage and absence of string concatenation.
 - `xss_001`: expects HTML escaping or sanitization helpers.
 - `command_injection_001`: prefers `subprocess` calls without `shell=True` or `os.system`.
-- Semgrep rules (if the `semgrep` CLI is installed) add additional warnings to the submission feedback payload.
-- Bandit (if installed) runs against snippets to surface Python security issues with severity/confidence thresholds.
 
 Submissions failing these checks are marked `failed` with feedback; other challenges remain `pending` until expanded analyzers are introduced. When Semgrep matches fire, the submission response includes an `issues` array with tool/severity/message details.
 

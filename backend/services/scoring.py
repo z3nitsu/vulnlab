@@ -63,17 +63,52 @@ class ChallengeScoringService:
                 feedback="No heuristic available for this challenge yet.",
             )
 
+        sandbox_issue: AnalysisIssue | None = None
+        if self.sandbox:
+            try:
+                sandbox_ok, sandbox_message = self.sandbox.run_tests(submission)
+            except Exception as exc:
+                return ScoringResult(
+                    status=SubmissionStatus.error,
+                    feedback=f"Sandbox execution failed: {exc}",
+                    issues=[*issues, AnalysisIssue("sandbox", str(exc), "error")],
+                )
+
+            if not sandbox_ok:
+                sandbox_issue = AnalysisIssue(
+                    tool="sandbox",
+                    message=sandbox_message or "Sandbox execution reported failure.",
+                    severity="error",
+                )
+                issues.append(sandbox_issue)
+                result.status = SubmissionStatus.failed
+                result.score = min(result.score if result.score is not None else 100, 40)
+                result.feedback = (
+                    f"{result.feedback}\nSandbox: {sandbox_message}"
+                    if result.feedback
+                    else f"Sandbox: {sandbox_message}"
+                )
+            elif sandbox_message:
+                sandbox_issue = AnalysisIssue(
+                    tool="sandbox",
+                    message=sandbox_message,
+                    severity="info",
+                )
+                issues.append(sandbox_issue)
+
         if issues:
             result.issues = issues
-            rendered = "\n".join(
-                f"- [{issue.severity.upper()}] {issue.message}" for issue in issues
-            )
-            prefix = "Static analysis findings:\n"
-            result.feedback = (
-                f"{result.feedback}\n\n{prefix}{rendered}"
-                if result.feedback
-                else f"{prefix}{rendered}"
-            )
+            static_issues = [i for i in issues if i.tool != "sandbox"]
+            if static_issues:
+                rendered = "\n".join(
+                    f"- [{issue.severity.upper()}] {issue.message}" for issue in static_issues
+                )
+                prefix = "Static analysis findings:\n"
+                result.feedback = (
+                    f"{result.feedback}\n\n{prefix}{rendered}"
+                    if result.feedback
+                    else f"{prefix}{rendered}"
+                )
 
         return result
 
