@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     api_key: str | None = Field(default=None)
     sandbox_timeout_seconds: int = Field(default=5)
     python_executable: str = Field(default="python3")
+    sandbox_driver: str = Field(default="local")
+    docker_binary: str = Field(default="docker")
+    docker_image: str = Field(default="python:3.11-slim")
+    docker_memory_limit: str = Field(default="128m")
+    docker_cpu_shares: int = Field(default=256)
 
     model_config = {
         "env_prefix": "VULNLABS_",

@@ -28,7 +28,7 @@ from .schemas import (
     SubmissionStats,
 )
 from .services.analyzers import BanditAnalyzer, SemgrepAnalyzer
-from .services.sandbox import LocalSandboxExecutor
+from .services.sandbox import create_sandbox_executor
 from .services.scoring import ChallengeScoringService
 from .services.worker import ScoringWorker
 
@@ -64,9 +64,14 @@ def create_app(settings: Settings) -> FastAPI:
         ),
     ]
 
-    sandbox_executor = LocalSandboxExecutor(
+    sandbox_executor = create_sandbox_executor(
+        driver=settings.sandbox_driver,
         python_executable=settings.python_executable,
         timeout_seconds=settings.sandbox_timeout_seconds,
+        docker_binary=settings.docker_binary,
+        docker_image=settings.docker_image,
+        docker_memory_limit=settings.docker_memory_limit,
+        docker_cpu_shares=settings.docker_cpu_shares,
     )
 
     app.state.scoring_service = ChallengeScoringService(

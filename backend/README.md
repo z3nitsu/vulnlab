@@ -45,12 +45,13 @@ All POST endpoints expect the `X-API-Key` header when an API key is configured.
 
 ## Scoring Heuristics (Current)
 
-The scoring pipeline now runs asynchronously in the background. Submissions are queued, marked as `pending`, and processed by a worker that applies heuristics, Semgrep/Bandit findings, and a lightweight sandbox stub before persisting the results.
+The scoring pipeline now runs asynchronously in the background. Submissions are queued, marked as `pending`, and processed by a worker that applies heuristics, Semgrep/Bandit findings, and a sandbox execution phase before persisting the results.
 
 - Background worker: processes queued submissions and updates their status (`pending` → `running` → `passed/failed/error`).
 - Semgrep rules (if the `semgrep` CLI is installed) add additional warnings to the submission feedback payload.
 - Bandit (if installed) runs against snippets to surface Python security issues with severity/confidence thresholds.
-- Sandbox stub detects obviously dangerous operations (e.g., `os.system`) and will be replaced by a containerised executor later on.
+- Sandbox execution: defaults to a local Python subprocess that compiles the code; set `VULNLABS_SANDBOX_DRIVER=docker` to run the same check inside an isolated Docker container (memory/time limits applied).
+  - If Docker is unavailable the run fails gracefully and the submission is marked with a sandbox error issue.
 
 Heuristic checks currently look for:
 
