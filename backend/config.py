@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     bandit_severity: str = Field(default="LOW")
     bandit_confidence: str = Field(default="LOW")
     api_key: str | None = Field(default=None)
+    sandbox_timeout_seconds: int = Field(default=5)
+    python_executable: str = Field(default="python3")
 
     model_config = {
         "env_prefix": "VULNLABS_",

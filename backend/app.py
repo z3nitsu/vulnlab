@@ -64,7 +64,10 @@ def create_app(settings: Settings) -> FastAPI:
         ),
     ]
 
-    sandbox_executor = LocalSandboxExecutor()
+    sandbox_executor = LocalSandboxExecutor(
+        python_executable=settings.python_executable,
+        timeout_seconds=settings.sandbox_timeout_seconds,
+    )
 
     app.state.scoring_service = ChallengeScoringService(
         analyzers=analyzers, sandbox=sandbox_executor

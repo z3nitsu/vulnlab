@@ -32,6 +32,10 @@ def client(tmp_path, monkeypatch) -> TestClient:
     import backend.db_init as db_init
     importlib.reload(db_init)
 
+    # Ensure sandbox/worker modules pick up the reloaded settings.
+    sys.modules.pop("backend.services.worker", None)
+    sys.modules.pop("backend.services.sandbox", None)
+
     settings = config.get_settings()
     db_init.init_db(settings)
 

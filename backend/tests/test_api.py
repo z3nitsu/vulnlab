@@ -158,3 +158,21 @@ def test_submission_pagination(client):
     ids_page1 = {item["id"] for item in first_page.json()}
     ids_page2 = {item["id"] for item in second_page.json()}
     assert ids_page1.isdisjoint(ids_page2)
+
+
+def test_sandbox_flags_dangerous_calls(client):
+    payload = {
+        "challenge_slug": "command_injection_001",
+        "code": "import os\n\nos.system('ls')",
+        "user_handle": "sandbox-tester",
+    }
+
+    response = client.post("/submissions", json=payload)
+    assert response.status_code == 201
+    submission = response.json()
+    client.app.state.scoring_worker.flush()
+
+    refreshed = client.get(f"/submissions/{submission['id']}").json()
+    assert refreshed["status"] == "failed"
+    sandbox_issues = [i for i in refreshed["issues"] if i["tool"] == "sandbox"]
+    assert sandbox_issues, "Expected sandbox to report an issue"

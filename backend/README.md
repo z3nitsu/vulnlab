@@ -38,6 +38,8 @@
 | `VULNLABS_BANDIT_SEVERITY` | `LOW` | Minimum severity Bandit should report. |
 | `VULNLABS_BANDIT_CONFIDENCE` | `LOW` | Minimum confidence Bandit should report. |
 | `VULNLABS_API_KEY` | unset | When provided, POST endpoints require `X-API-Key` to match. |
+| `VULNLABS_SANDBOX_TIMEOUT_SECONDS` | `5` | Max time allowed for sandbox compilation run. |
+| `VULNLABS_PYTHON_EXECUTABLE` | `python3` | Interpreter used by the sandbox executor. |
 
 All POST endpoints expect the `X-API-Key` header when an API key is configured.
 
