@@ -158,6 +158,44 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Submission not found")
         return SubmissionOut.model_validate(submission)
 
+    @app.post(
+        "/submissions/{submission_id}/rescore",
+        response_model=SubmissionOut,
+        tags=["submissions"],
+    )
+    async def rescore_submission(
+        submission_id: str,
+        session: Session = Depends(get_session),
+    ) -> SubmissionOut:
+        submission = session.get(Submission, submission_id)
+        if not submission:
+            raise HTTPException(status_code=404, detail="Submission not found")
+
+        scoring_service: ChallengeScoringService = app.state.scoring_service
+        result = scoring_service.score(submission)
+        submission.status = result.status
+        submission.score = result.score
+        submission.feedback = result.feedback
+        submission.analysis_report = [
+            {
+                "tool": issue.tool,
+                "message": issue.message,
+                "severity": issue.severity,
+            }
+            for issue in result.issues or []
+        ]
+        session.add(submission)
+        session.commit()
+        session.refresh(submission)
+
+        logger.info(
+            "Submission rescored id=%s status=%s",
+            submission.id,
+            submission.status.value,
+        )
+
+        return SubmissionOut.model_validate(submission)
+
     return app
 
 

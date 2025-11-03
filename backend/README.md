@@ -22,6 +22,7 @@
 | POST | `/submissions` | Submit a fix attempt (heuristics run immediately). |
 | GET | `/submissions` | List submissions; optional `challenge_slug` filter. |
 | GET | `/submissions/{submission_id}` | Fetch a submission by id. |
+| POST | `/submissions/{submission_id}/rescore` | Re-run scoring using the latest analyzers. |
 
 ## Configuration
 
