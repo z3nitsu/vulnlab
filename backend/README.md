@@ -29,3 +29,11 @@
 | `VULNLABS_DEBUG` | `false` | Enables FastAPI debug mode. |
 | `VULNLABS_DATABASE_URL` | SQLite file under `backend/data` | Connection string for persistence layer. |
 | `VULNLABS_LOG_LEVEL` | `INFO` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, etc.). |
+
+## Tests
+
+Run the API test suite (uses a temporary SQLite database) with:
+
+```bash
+pytest backend/tests
+```
