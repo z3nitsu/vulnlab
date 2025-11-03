@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -59,3 +59,14 @@ class SubmissionOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class StatusCount(BaseModel):
+    status: SubmissionStatus
+    count: int
+
+
+class SubmissionStats(BaseModel):
+    total: int
+    average_score: Optional[float]
+    status_counts: List[StatusCount]

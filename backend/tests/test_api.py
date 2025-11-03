@@ -69,3 +69,40 @@ def login(session, username, password):
     if rescored["status"] == "passed":
         assert rescored["score"] == 100
     assert isinstance(rescored["issues"], list)
+
+
+def test_submission_stats(client):
+    insecure_payload = {
+        "challenge_slug": "sqli_001",
+        "code": "username = input('u')\nquery = \"SELECT * FROM users WHERE username = '\" + username",
+        "user_handle": "insecure",
+    }
+    secure_payload = {
+        "challenge_slug": "sqli_001",
+        "code": """
+from sqlalchemy import text
+def login(session, username, password):
+    stmt = text("SELECT id FROM users WHERE username = :username AND password = :password")
+    return session.execute(stmt, {"username": username, "password": password}).first()
+""",
+        "user_handle": "secure",
+    }
+
+    insecure_resp = client.post("/submissions", json=insecure_payload).json()
+    secure_resp = client.post("/submissions", json=secure_payload).json()
+
+    stats_resp = client.get("/stats/submissions")
+    assert stats_resp.status_code == 200
+    stats = stats_resp.json()
+
+    assert stats["total"] >= 2
+    scores = [insecure_resp["score"] or 0, secure_resp["score"] or 0]
+    expected_avg = sum(scores) / len(scores)
+    if stats["average_score"] is not None:
+        assert abs(stats["average_score"] - expected_avg) <= 1e-6 or abs(
+            stats["average_score"] - expected_avg
+        ) < 0.1
+
+    status_counts = {entry["status"]: entry["count"] for entry in stats["status_counts"]}
+    assert insecure_resp["status"] in status_counts
+    assert secure_resp["status"] in status_counts

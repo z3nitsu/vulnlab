@@ -1,8 +1,9 @@
 import logging
+from decimal import Decimal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .config import Settings, get_settings
@@ -14,8 +15,10 @@ from .schemas import (
     AnalysisIssueOut,
     ChallengeOut,
     ChallengeSummary,
+    StatusCount,
     SubmissionCreate,
     SubmissionOut,
+    SubmissionStats,
 )
 from .services.analyzers import BanditAnalyzer, SemgrepAnalyzer
 from .services.scoring import ChallengeScoringService
@@ -195,6 +198,35 @@ def create_app(settings: Settings) -> FastAPI:
         )
 
         return SubmissionOut.model_validate(submission)
+
+    @app.get(
+        "/stats/submissions",
+        response_model=SubmissionStats,
+        tags=["stats"],
+    )
+    async def submission_stats(
+        session: Session = Depends(get_session),
+    ) -> SubmissionStats:
+        total = session.scalar(select(func.count(Submission.id))) or 0
+
+        status_rows = session.execute(
+            select(Submission.status, func.count(Submission.id)).group_by(Submission.status)
+        ).all()
+        status_counts = [
+            StatusCount(status=row[0], count=row[1]) for row in status_rows
+        ]
+
+        avg_score_value = session.scalar(select(func.avg(Submission.score)))
+        if isinstance(avg_score_value, Decimal):
+            avg_score_value = float(avg_score_value)
+        elif avg_score_value is not None:
+            avg_score_value = float(avg_score_value)
+
+        return SubmissionStats(
+            total=total,
+            average_score=avg_score_value,
+            status_counts=status_counts,
+        )
 
     return app
 
