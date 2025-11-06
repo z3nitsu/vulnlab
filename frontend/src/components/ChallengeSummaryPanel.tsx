@@ -1,48 +1,59 @@
 import { useMemo } from 'react'
-
 import type { ChallengeDetail } from '../types'
 
 type Props = {
   challenge: ChallengeDetail | null
+  isLoading?: boolean
 }
 
-export function ChallengeSummaryPanel({ challenge }: Props) {
-  const lines = useMemo(() => {
+export function ChallengeSummaryPanel({ challenge, isLoading }: Props) {
+  const snippetLines = useMemo(() => {
     if (!challenge) return []
     return challenge.vulnerable_snippet.split('\n')
   }, [challenge])
 
+  if (isLoading) {
+    return (
+      <section className="panel">
+        <div className="skeleton-group">
+          <div className="skeleton skeleton--title" />
+          <div className="skeleton skeleton--body" />
+          <div className="skeleton skeleton--body" />
+          <div className="skeleton skeleton--code" />
+        </div>
+      </section>
+    )
+  }
+
   if (!challenge) {
     return (
-      <div className="rounded-xl bg-surface.panel p-6 text-center text-sm text-slate-400 shadow-panel">
-        Select a challenge to view the vulnerable snippet.
-      </div>
+      <section className="panel">
+        <div className="empty-state">
+          <h2 className="panel__title">Select a challenge</h2>
+          <p className="muted">Browse the catalog to inspect the vulnerable snippet and acceptance criteria.</p>
+        </div>
+      </section>
     )
   }
 
   return (
-    <div className="rounded-xl bg-surface.panel p-4 shadow-panel">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-100">{challenge.title}</h1>
-          <p className="text-sm text-slate-400">
-            {challenge.category} · {challenge.language.toUpperCase()}
-          </p>
-        </div>
+    <section className="panel">
+      <div className="panel__header panel__header--stacked">
+        <p className="eyebrow">{challenge.category}</p>
+        <h2 className="panel__title">{challenge.title}</h2>
+        <span className="muted">{challenge.language.toUpperCase()}</span>
       </div>
-      <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-300">
-        <p>{challenge.description}</p>
-        <div className="overflow-hidden rounded-lg border border-slate-800">
-          <pre className="bg-slate-950/80 p-4 text-xs leading-6 text-slate-200">
-            {lines.map((line, idx) => (
-              <span className="block" key={idx}>
-                <span className="select-none pr-4 text-slate-600">{idx + 1}</span>
-                {line}
-              </span>
-            ))}
-          </pre>
-        </div>
+
+      <p className="body-text">{challenge.description}</p>
+
+      <div className="code-block">
+        {snippetLines.map((line, index) => (
+          <div key={index} className="code-block__line">
+            <span className="code-block__line-number">{index + 1}</span>
+            <span className="code-block__content">{line || '\u00A0'}</span>
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   )
 }

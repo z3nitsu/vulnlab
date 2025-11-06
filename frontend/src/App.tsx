@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
 
 import { ChallengeSidebar } from './components/ChallengeSidebar'
 import { ChallengeSummaryPanel } from './components/ChallengeSummaryPanel'
@@ -31,7 +30,10 @@ function App() {
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [pendingStatus, setPendingStatus] = useState<SubmissionStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [userHandle, setUserHandle] = useState(() => localStorage.getItem('vulnlabs.handle') ?? DEFAULT_HANDLE)
+  const [userHandle, setUserHandle] = useState(
+    () => localStorage.getItem('vulnlabs.handle') ?? DEFAULT_HANDLE
+  )
+
   const pollerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const clearPoller = useCallback(() => {
@@ -91,25 +93,28 @@ function App() {
     clearPoller()
   }, [selectedSlug, clearPoller])
 
-  const pollSubmission = useCallback((submissionId: string) => {
-    clearPoller()
-    pollerRef.current = setInterval(async () => {
-      try {
-        const latest = await fetchSubmission(submissionId)
-        setSubmission(latest)
-        if (latest.status !== 'pending' && latest.status !== 'running') {
+  const pollSubmission = useCallback(
+    (submissionId: string) => {
+      clearPoller()
+      pollerRef.current = setInterval(async () => {
+        try {
+          const latest = await fetchSubmission(submissionId)
+          setSubmission(latest)
+          if (latest.status !== 'pending' && latest.status !== 'running') {
+            setPendingStatus(null)
+            clearPoller()
+          } else {
+            setPendingStatus(latest.status)
+          }
+        } catch (err) {
+          console.error(err)
           setPendingStatus(null)
           clearPoller()
-        } else {
-          setPendingStatus(latest.status)
         }
-      } catch (err) {
-        console.error(err)
-        setPendingStatus(null)
-        clearPoller()
-      }
-    }, POLL_INTERVAL_MS)
-  }, [clearPoller])
+      }, POLL_INTERVAL_MS)
+    },
+    [clearPoller]
+  )
 
   const handleSubmit = useCallback(async () => {
     if (!selectedSlug) return
@@ -135,46 +140,39 @@ function App() {
 
   useEffect(() => clearPoller, [clearPoller])
 
-  const canSubmit = useMemo(() => {
-    return Boolean(code.trim().length)
-  }, [code])
-
-  const headerSubtitle = challengeDetail
-    ? `${challengeDetail.category} · ${challengeDetail.language.toUpperCase()}`
-    : 'Load a challenge to get started'
+  const canSubmit = useMemo(() => Boolean(code.trim().length), [code])
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="rounded bg-brand.primary/20 px-3 py-1 text-sm font-semibold text-brand.light">
-              VulnLabs
-            </span>
-            <span className="text-sm text-slate-400">Secure Coding Arena</span>
+    <div className="app">
+      <header className="app__header">
+        <div className="container header__content">
+          <div>
+            <span className="brand-chip">VulnLabs</span>
+            <p className="muted small">Secure coding arena for remediating real-world bugs.</p>
           </div>
-          <div className="flex items-center gap-3 text-sm text-slate-300">
-            {detailLoading && (
-              <span className="flex items-center gap-2 text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading challenge…
+          {detailLoading && (
+            <div className="header__loading">
+              <span className="status-badge status-badge--info">
+                <span className="status-badge__spinner" />
+                Loading challenge…
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </header>
 
       {error && (
-        <div className="bg-rose-500/10 text-rose-200 border border-rose-500/40">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 text-sm">
+        <div className="banner banner--error">
+          <div className="container banner__content">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-rose-200/80 hover:text-rose-100">
+            <button type="button" className="ghost-button ghost-button--light" onClick={() => setError(null)}>
               Dismiss
             </button>
           </div>
         </div>
       )}
 
-      <main className="mx-auto grid min-h-[calc(100vh-4.5rem)] max-w-7xl grid-cols-[280px_minmax(0,1fr)_320px] gap-6 px-6 py-6">
+      <main className="container layout">
         <ChallengeSidebar
           challenges={challenges}
           selectedSlug={selectedSlug}
@@ -182,20 +180,8 @@ function App() {
           isLoading={listLoading}
         />
 
-        <section className="flex flex-col gap-4">
-          <div className="rounded-xl bg-surface.panel p-4 shadow-panel">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h1 className="text-lg font-semibold text-slate-100">
-                  {challengeDetail?.title ?? 'Select a challenge'}
-                </h1>
-                <p className="text-sm text-slate-400">{headerSubtitle}</p>
-              </div>
-            </div>
-          </div>
-
-          <ChallengeSummaryPanel challenge={challengeDetail} />
-
+        <div className="layout__main">
+          <ChallengeSummaryPanel challenge={challengeDetail} isLoading={detailLoading} />
           <EditorPanel
             code={code}
             onCodeChange={setCode}
@@ -205,7 +191,7 @@ function App() {
             pendingStatus={pendingStatus}
             submission={submission}
           />
-        </section>
+        </div>
 
         <InsightsPanel
           challenge={challengeDetail}

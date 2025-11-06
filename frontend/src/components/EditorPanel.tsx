@@ -1,8 +1,5 @@
-import clsx from 'clsx'
-import { Loader2 } from 'lucide-react'
-
 import type { Submission, SubmissionStatus } from '../types'
-import { getStatusBadgeClasses, getStatusLabel } from '../lib/status'
+import { getStatusMeta } from '../lib/status'
 
 type Props = {
   code: string
@@ -24,53 +21,42 @@ export function EditorPanel({
   submission,
 }: Props) {
   const status = pendingStatus ?? submission?.status ?? null
+  const statusMeta = getStatusMeta(status)
 
   return (
-    <div className="flex flex-1 flex-col rounded-xl bg-surface.panel shadow-panel">
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-sm text-slate-300">
-        <span className="font-medium">Your Fix</span>
-        <div className="flex items-center gap-3">
-          {status && (
-            <span className={clsx('rounded-full px-3 py-1 text-xs font-semibold', getStatusBadgeClasses(status))}>
-              {pendingStatus ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {getStatusLabel(status)}
-                </span>
-              ) : (
-                getStatusLabel(status)
-              )}
+    <section className="panel editor">
+      <div className="panel__header editor__header">
+        <div className="editor__heading">
+          <h2 className="panel__title">Solution Editor</h2>
+          {statusMeta ? (
+            <span className={`status-badge status-badge--${statusMeta.tone}`}>
+              {pendingStatus && <span className="status-badge__spinner" />}
+              {statusMeta.label}
             </span>
-          )}
-          <button
-            type="button"
-            onClick={onReset}
-            className="rounded-md border border-slate-700 px-3 py-1.5 transition hover:border-brand.light hover:text-brand.light"
-          >
-            Reset Code
-          </button>
+          ) : null}
         </div>
-      </div>
-      <textarea
-        className="h-full flex-1 resize-none bg-transparent p-4 font-mono text-sm text-slate-100 outline-none"
-        placeholder="Write your secure fix here..."
-        value={code}
-        onChange={(event) => onCodeChange(event.target.value)}
-      />
-      <div className="flex items-center justify-end gap-3 border-t border-slate-800 px-4 py-3">
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSubmit || !!pendingStatus}
-          className={clsx(
-            'rounded-md bg-brand.primary px-5 py-2 text-sm font-semibold text-white shadow-panel transition',
-            'hover:bg-brand.dark',
-            (!canSubmit || pendingStatus) && 'cursor-not-allowed opacity-60'
-          )}
-        >
-          {pendingStatus ? 'Submitting…' : 'Submit Fix'}
+        <button type="button" className="ghost-button" onClick={onReset}>
+          Reset snippet
         </button>
       </div>
-    </div>
+
+      <textarea
+        className="editor__textarea"
+        value={code}
+        onChange={(event) => onCodeChange(event.target.value)}
+        placeholder="Write your secure fix here..."
+      />
+
+      <div className="editor__actions">
+        <button
+          type="button"
+          className="primary-button"
+          onClick={onSubmit}
+          disabled={!canSubmit || Boolean(pendingStatus)}
+        >
+          {pendingStatus ? 'Submitting…' : 'Submit fix'}
+        </button>
+      </div>
+    </section>
   )
 }

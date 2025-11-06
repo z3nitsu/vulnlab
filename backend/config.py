@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         / "static_analysis"
         / "semgrep"
     )
+    semgrep_binary: str = Field(default="semgrep")
+    semgrep_timeout_seconds: int = Field(default=20)
     bandit_binary: str = Field(default="bandit")
     bandit_timeout_seconds: int = Field(default=10)
     bandit_severity: str = Field(default="LOW")

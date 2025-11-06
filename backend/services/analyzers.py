@@ -22,10 +22,12 @@ class SemgrepAnalyzer(StaticAnalyzer):
         rule_paths: Sequence[Path],
         binary: str = "semgrep",
         timeout_seconds: int = 10,
+        process_timeout_padding: int = 5,
     ) -> None:
         self.rule_paths = [Path(rule) for rule in rule_paths]
         self.binary = binary
         self.timeout_seconds = timeout_seconds
+        self.process_timeout_padding = max(process_timeout_padding, 0)
 
     def analyze(self, submission: Submission) -> Sequence[AnalysisIssue]:
         if not self.rule_paths:
@@ -45,6 +47,8 @@ class SemgrepAnalyzer(StaticAnalyzer):
                 "--disable-version-check",
                 "--quiet",
                 "--json",
+                "--timeout",
+                str(self.timeout_seconds),
             ]
             for rule in self.rule_paths:
                 if rule.exists():
@@ -59,9 +63,17 @@ class SemgrepAnalyzer(StaticAnalyzer):
                     cmd,
                     capture_output=True,
                     text=True,
-                    timeout=self.timeout_seconds,
+                    timeout=self.timeout_seconds + self.process_timeout_padding,
                     check=False,
                 )
+            except subprocess.TimeoutExpired as exc:
+                logger.warning(
+                    "Semgrep timed out after %s seconds (binary=%s): %s",
+                    self.timeout_seconds,
+                    self.binary,
+                    exc,
+                )
+                return []
             except (OSError, subprocess.SubprocessError) as exc:
                 logger.warning("Semgrep invocation failed: %s", exc)
                 return []

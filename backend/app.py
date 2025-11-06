@@ -64,7 +64,11 @@ def create_app(settings: Settings) -> FastAPI:
         settings.semgrep_rules_root / "python" / "command_injection.yaml",
     ]
     analyzers = [
-        SemgrepAnalyzer(semgrep_rules),
+        SemgrepAnalyzer(
+            semgrep_rules,
+            binary=settings.semgrep_binary,
+            timeout_seconds=settings.semgrep_timeout_seconds,
+        ),
         BanditAnalyzer(
             binary=settings.bandit_binary,
             timeout_seconds=settings.bandit_timeout_seconds,
