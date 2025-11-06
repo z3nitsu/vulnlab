@@ -370,6 +370,7 @@ textarea {
   border: 1px solid rgba(148, 163, 184, 0.4) !important;
   border-radius: 12px !important;
   box-shadow: 0 16px 30px rgba(8, 12, 24, 0.55);
+  max-width: 320px;
 }
 
 .editor__surface .zone-widget-container .zone-widget .head {
@@ -385,17 +386,12 @@ textarea {
   border-radius: 12px !important;
   white-space: normal !important;
   position: absolute !important;
-  transform: translateY(4px);
+  transform: translate(-12px, 8px);
+  z-index: 20;
 }
 
-.editor__surface .monaco-editor-hover {
-  max-width: 340px;
-  background: rgba(13, 23, 44, 0.95) !important;
-  border: 1px solid rgba(148, 163, 184, 0.35) !important;
-  color: #f8fafc !important;
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.55) !important;
-  border-radius: 12px !important;
-  white-space: normal !important;
+.editor__surface .monaco-editor .monaco-editor-overlaymessage {
+  display: none !important;
 }
 
 .editor__surface .monaco-editor-hover .hover-contents,
@@ -426,7 +422,7 @@ textarea {
   font-size: 0.9rem;
   line-height: 1.6;
   resize: none;
-  color: var(--color-text-muted);
+  color: #f8fafc;
 }
 
 .editor__textarea--loading {

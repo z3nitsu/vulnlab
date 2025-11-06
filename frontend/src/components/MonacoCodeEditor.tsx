@@ -26,27 +26,27 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: '', foreground: 'F8FAFC' },
-        { token: 'comment', foreground: 'A5B4FC', fontStyle: 'italic' },
-        { token: 'keyword', foreground: '93C5FD', fontStyle: 'bold' },
-        { token: 'string', foreground: 'FCD34D' },
+        { token: '', foreground: 'F9FBFF' },
+        { token: 'comment', foreground: '9CA8D7', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '7DD3FC', fontStyle: 'bold' },
+        { token: 'string', foreground: 'FBBF24' },
         { token: 'number', foreground: 'FCA5A5' },
         { token: 'type.identifier', foreground: 'A5F3FC' },
-        { token: 'identifier', foreground: 'F8FAFC' },
-        { token: 'variable', foreground: 'F8FAFC' },
+        { token: 'identifier', foreground: 'F9FBFF' },
+        { token: 'variable', foreground: 'F9FBFF' },
         { token: 'parameter', foreground: 'FBCFE8' },
         { token: 'function', foreground: 'BAE6FD' },
         { token: 'delimiter', foreground: 'E2E8F0' },
         { token: 'operator', foreground: 'A5B4FC' },
       ],
       colors: {
-        'editor.background': '#0F172A',
-        'editor.foreground': '#f8fafc',
-        'editorLineNumber.foreground': '#7f8ab2',
-        'editorLineNumber.activeForeground': '#A5B4FC',
-        'editor.selectionBackground': '#2563EB48',
-        'editor.inactiveSelectionBackground': '#2563EB30',
-        'editor.lineHighlightBackground': '#14203C',
+        'editor.background': '#101b36',
+        'editor.foreground': '#f9fbff',
+        'editorLineNumber.foreground': '#7b88b3',
+        'editorLineNumber.activeForeground': '#c7d2fe',
+        'editor.selectionBackground': '#3b82f645',
+        'editor.inactiveSelectionBackground': '#3b82f625',
+        'editor.lineHighlightBackground': '#172549',
         'editorCursor.foreground': '#F8FAFC',
         'editorSuggestWidget.background': '#0f172a',
         'editorSuggestWidget.border': '#1d2a4a',
@@ -119,7 +119,7 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
       startColumn: number,
       endColumn: number,
       message: string,
-      severity: import('monaco-editor').MarkerSeverity = monacoInstance.MarkerSeverity.Info,
+      severity: import('monaco-editor').MarkerSeverity = monacoInstance.MarkerSeverity.Hint,
     ) => {
       markers.push({
         startLineNumber: lineNumber,
@@ -155,7 +155,13 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
 
         if (patterns.shellTrue.test(line)) {
           const col = line.toLowerCase().indexOf('shell') + 1 || 1
-          pushMarker(lineNumber, col, col + 'shell'.length, 'subprocess invoked with shell=True. This may be vulnerable to command injection.', monacoInstance.MarkerSeverity.Warning)
+          pushMarker(
+            lineNumber,
+            col,
+            col + 'shell'.length,
+            'subprocess invoked with shell=True. This may be vulnerable to command injection.',
+            monacoInstance.MarkerSeverity.Info
+          )
         }
 
         if (patterns.execEval.test(line)) {
