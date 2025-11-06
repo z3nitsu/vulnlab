@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
+
 import type { ChallengeDetail } from '../types'
+import { Tabs } from './ui/Tabs'
 
 type Props = {
   challenge: ChallengeDetail | null
@@ -36,24 +38,61 @@ export function ChallengeSummaryPanel({ challenge, isLoading }: Props) {
     )
   }
 
+  const overviewTab = {
+    id: 'overview',
+    label: 'Overview',
+    content: (
+      <div className="challenge-overview">
+        <p className="body-text body-text--muted">{challenge.description}</p>
+        <div className="code-block">
+          {snippetLines.map((line, index) => (
+            <div key={index} className="code-block__line">
+              <span className="code-block__line-number">{index + 1}</span>
+              <span className="code-block__content">{line || '\u00A0'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  }
+
+  const criteriaTab = {
+    id: 'criteria',
+    label: `Acceptance Criteria (${challenge.acceptance_criteria?.length ?? 0})`,
+    content: (
+      <ul className="list list--dense">
+        {(challenge.acceptance_criteria ?? []).map((item, index) => (
+          <li key={index}>{item}</li>
+        ))}
+      </ul>
+    ),
+  }
+
+  const hintsTab = {
+    id: 'hints',
+    label: `Hints (${challenge.hints?.length ?? 0})`,
+    content: challenge.hints?.length ? (
+      <ul className="list list--dense">
+        {challenge.hints.map((hint, index) => (
+          <li key={index}>{hint}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="muted small">No hints provided for this challenge yet.</p>
+    ),
+  }
+
+  const tabs = [overviewTab, criteriaTab, hintsTab]
+
   return (
     <section className="panel">
       <div className="panel__header panel__header--stacked">
         <p className="eyebrow">{challenge.category}</p>
         <h2 className="panel__title">{challenge.title}</h2>
-        <span className="muted">{challenge.language.toUpperCase()}</span>
+        <span className="muted language-pill">{challenge.language.toUpperCase()}</span>
       </div>
 
-      <p className="body-text">{challenge.description}</p>
-
-      <div className="code-block">
-        {snippetLines.map((line, index) => (
-          <div key={index} className="code-block__line">
-            <span className="code-block__line-number">{index + 1}</span>
-            <span className="code-block__content">{line || '\u00A0'}</span>
-          </div>
-        ))}
-      </div>
+      <Tabs tabs={tabs} />
     </section>
   )
 }

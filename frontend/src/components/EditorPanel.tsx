@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
+import { Maximize2, Minimize2 } from 'lucide-react'
 
 import type { Submission, SubmissionStatus } from '../types'
 import { getStatusMeta } from '../lib/status'
@@ -28,9 +29,12 @@ export function EditorPanel({
 }: Props) {
   const status = pendingStatus ?? submission?.status ?? null
   const statusMeta = getStatusMeta(status)
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const toggleExpanded = () => setIsExpanded((prev) => !prev)
 
   return (
-    <section className="panel editor">
+    <section className={`panel editor${isExpanded ? ' editor--expanded' : ''}`}>
       <div className="panel__header editor__header">
         <div className="editor__heading">
           <h2 className="panel__title">Solution Editor</h2>
@@ -41,12 +45,23 @@ export function EditorPanel({
             </span>
           ) : null}
         </div>
-        <button type="button" className="ghost-button" onClick={onReset}>
-          Reset snippet
-        </button>
+        <div className="editor__toolbar">
+          <span className="editor__language-chip">{(language ?? 'python').toUpperCase()}</span>
+          <button
+            type="button"
+            className="ghost-button ghost-button--subtle"
+            onClick={toggleExpanded}
+            aria-label={isExpanded ? 'Collapse editor' : 'Expand editor'}
+          >
+            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+          <button type="button" className="ghost-button" onClick={onReset}>
+            Reset snippet
+          </button>
+        </div>
       </div>
 
-      <div className="editor__surface">
+      <div className={`editor__surface${isExpanded ? ' editor__surface--expanded' : ''}`}>
         <Suspense
           fallback={
             <textarea
