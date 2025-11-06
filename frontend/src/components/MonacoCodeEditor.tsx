@@ -26,16 +26,23 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
-        { token: 'keyword', foreground: '60a5fa' },
-        { token: 'string', foreground: 'fcd34d' },
-        { token: 'number', foreground: 'f472b6' },
-        { token: 'identifier', foreground: 'e2e8f0' },
+        { token: '', foreground: 'E2E8F0' },
+        { token: 'comment', foreground: '94A3B8', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '93C5FD', fontStyle: 'bold' },
+        { token: 'string', foreground: 'FDE68A' },
+        { token: 'number', foreground: 'FCA5A5' },
+        { token: 'type.identifier', foreground: 'A5F3FC' },
+        { token: 'identifier', foreground: 'E2E8F0' },
+        { token: 'variable', foreground: 'E2E8F0' },
+        { token: 'parameter', foreground: 'FBCFE8' },
+        { token: 'function', foreground: 'BAE6FD' },
+        { token: 'delimiter', foreground: 'CBD5F5' },
+        { token: 'operator', foreground: 'A5B4FC' },
       ],
       colors: {
         'editor.background': '#0b1020',
         'editor.foreground': '#e2e8f0',
-        'editorLineNumber.foreground': '#475569',
+        'editorLineNumber.foreground': '#64748b',
         'editorLineNumber.activeForeground': '#93c5fd',
         'editor.selectionBackground': '#1e3a8a40',
         'editor.inactiveSelectionBackground': '#1e3a8a20',
@@ -112,7 +119,7 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
       startColumn: number,
       endColumn: number,
       message: string,
-      severity: import('monaco-editor').MarkerSeverity = monacoInstance.MarkerSeverity.Warning,
+      severity: import('monaco-editor').MarkerSeverity = monacoInstance.MarkerSeverity.Info,
     ) => {
       markers.push({
         startLineNumber: lineNumber,
@@ -133,53 +140,27 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
         if (normalized.includes('select') && /f["']/.test(line) && line.includes('{')) {
           const indexOfSelect = normalized.indexOf('select')
           const col = indexOfSelect >= 0 ? indexOfSelect + 1 : 1
-          pushMarker(
-            lineNumber,
-            col,
-            col + 6,
-            'Potential SQL f-string detected. Use parameterized queries instead of string interpolation.',
-          )
+          pushMarker(lineNumber, col, col + 6, 'Potential SQL f-string detected. Use parameterized queries instead of string interpolation.')
         } else if (normalized.includes('select') && patterns.stringConcat.test(line)) {
           const concatIndex = line.indexOf('+')
           const col = concatIndex >= 0 ? concatIndex + 1 : 1
-          pushMarker(
-            lineNumber,
-            col,
-            col + 1,
-            'SQL string concatenation detected. Prefer prepared statements with bind parameters.',
-          )
+          pushMarker(lineNumber, col, col + 1, 'SQL string concatenation detected. Prefer prepared statements with bind parameters.')
         }
 
         if (patterns.osSystem.test(line)) {
           const systemIndex = normalized.indexOf('os.system')
           const col = systemIndex >= 0 ? systemIndex + 1 : 1
-          pushMarker(
-            lineNumber,
-            col,
-            col + 'os.system'.length,
-            "Call to os.system detected. Consider using subprocess without shell access.",
-          )
+          pushMarker(lineNumber, col, col + 'os.system'.length, "Call to os.system detected. Consider using subprocess without shell access.")
         }
 
         if (patterns.shellTrue.test(line)) {
           const col = line.toLowerCase().indexOf('shell') + 1 || 1
-          pushMarker(
-            lineNumber,
-            col,
-            col + 'shell'.length,
-            "subprocess invoked with shell=True. This is vulnerable to command injection.",
-            monacoInstance.MarkerSeverity.Error,
-          )
+          pushMarker(lineNumber, col, col + 'shell'.length, 'subprocess invoked with shell=True. This may be vulnerable to command injection.', monacoInstance.MarkerSeverity.Warning)
         }
 
         if (patterns.execEval.test(line)) {
           const col = line.toLowerCase().indexOf('exec') + 1 || line.toLowerCase().indexOf('eval') + 1 || 1
-          pushMarker(
-            lineNumber,
-            col,
-            col + 4,
-            'Use of exec/eval detected. Avoid executing dynamic code from user input.',
-          )
+          pushMarker(lineNumber, col, col + 4, 'Use of exec/eval detected. Avoid executing dynamic code from user input.')
         }
       }
     })
