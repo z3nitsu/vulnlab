@@ -180,26 +180,29 @@ function App() {
           isLoading={listLoading}
         />
 
-        <div className="layout__main">
-          <ChallengeSummaryPanel challenge={challengeDetail} isLoading={detailLoading} />
-          <EditorPanel
-            code={code}
-            onCodeChange={setCode}
-            onSubmit={handleSubmit}
-            onReset={() => setCode(challengeDetail?.vulnerable_snippet ?? '')}
-            canSubmit={canSubmit}
-            pendingStatus={pendingStatus}
-            submission={submission}
-            language={challengeDetail?.language}
-          />
+        <div className="workspace">
+          <div className="workspace__panel workspace__panel--left">
+            <ChallengeSummaryPanel challenge={challengeDetail} isLoading={detailLoading} />
+            <InsightsPanel
+              challenge={challengeDetail}
+              submission={submission}
+              userHandle={userHandle}
+              onHandleChange={setUserHandle}
+            />
+          </div>
+          <div className="workspace__panel workspace__panel--right">
+            <EditorPanel
+              code={code}
+              onCodeChange={setCode}
+              onSubmit={handleSubmit}
+              onReset={() => setCode(challengeDetail?.vulnerable_snippet ?? '')}
+              canSubmit={canSubmit}
+              pendingStatus={pendingStatus}
+              submission={submission}
+              language={challengeDetail?.language}
+            />
+          </div>
         </div>
-
-        <InsightsPanel
-          challenge={challengeDetail}
-          submission={submission}
-          userHandle={userHandle}
-          onHandleChange={setUserHandle}
-        />
       </main>
     </div>
   )
