@@ -323,23 +323,42 @@ textarea {
   gap: 0.75rem;
 }
 
-.editor__textarea {
+.editor__surface {
   background: rgba(5, 8, 17, 0.75);
   border: 1px solid rgba(88, 107, 148, 0.25);
   border-radius: var(--radius-lg);
-  min-height: 320px;
+  min-height: 340px;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor__surface .monaco-editor,
+.editor__surface .monaco-editor-background,
+.editor__surface .margin {
+  background: transparent !important;
+}
+
+.editor__surface .monaco-editor .scrollbar {
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.editor__textarea {
+  background: transparent;
+  border: none;
+  min-height: 340px;
   padding: 1.2rem 1.4rem;
   font-family: var(--font-mono);
   font-size: 0.9rem;
   line-height: 1.6;
-  resize: vertical;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  resize: none;
+  color: var(--color-text-muted);
 }
 
-.editor__textarea:focus {
-  outline: none;
-  border-color: rgba(37, 99, 235, 0.7);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+.editor__textarea--loading {
+  width: 100%;
+  background: rgba(5, 8, 17, 0.75);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(88, 107, 148, 0.25);
 }
 
 .editor__actions {

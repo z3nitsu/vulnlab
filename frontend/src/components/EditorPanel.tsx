@@ -1,5 +1,9 @@
+import { lazy, Suspense } from 'react'
+
 import type { Submission, SubmissionStatus } from '../types'
 import { getStatusMeta } from '../lib/status'
+
+const MonacoCodeEditor = lazy(() => import('./MonacoCodeEditor'))
 
 type Props = {
   code: string
@@ -9,6 +13,7 @@ type Props = {
   canSubmit: boolean
   pendingStatus: SubmissionStatus | null
   submission: Submission | null
+  language?: string
 }
 
 export function EditorPanel({
@@ -19,6 +24,7 @@ export function EditorPanel({
   canSubmit,
   pendingStatus,
   submission,
+  language,
 }: Props) {
   const status = pendingStatus ?? submission?.status ?? null
   const statusMeta = getStatusMeta(status)
@@ -40,12 +46,20 @@ export function EditorPanel({
         </button>
       </div>
 
-      <textarea
-        className="editor__textarea"
-        value={code}
-        onChange={(event) => onCodeChange(event.target.value)}
-        placeholder="Write your secure fix here..."
-      />
+      <div className="editor__surface">
+        <Suspense
+          fallback={
+            <textarea
+              className="editor__textarea editor__textarea--loading"
+              value={code}
+              readOnly
+              placeholder="Loading editor…"
+            />
+          }
+        >
+          <MonacoCodeEditor value={code} language={language} onChange={onCodeChange} />
+        </Suspense>
+      </div>
 
       <div className="editor__actions">
         <button

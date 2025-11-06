@@ -190,6 +190,7 @@ function App() {
             canSubmit={canSubmit}
             pendingStatus={pendingStatus}
             submission={submission}
+            language={challengeDetail?.language}
           />
         </div>
 
