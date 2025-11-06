@@ -1,4 +1,8 @@
-import Editor from '@monaco-editor/react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import Editor, { useMonaco } from '@monaco-editor/react'
+
+type Monaco = typeof import('monaco-editor')
+type CodeEditor = import('monaco-editor').editor.IStandaloneCodeEditor
 
 type Props = {
   value: string
@@ -7,8 +11,166 @@ type Props = {
 }
 
 export default function MonacoCodeEditor({ value, language = 'python', onChange }: Props) {
+  const monaco = useMonaco()
+  const editorRef = useRef<CodeEditor | null>(null)
+  const monacoRef = useRef<Monaco | null>(null)
+
   const handleChange = (nextValue: string | undefined) => {
     onChange(nextValue ?? '')
+  }
+
+  useEffect(() => {
+    if (!monaco) return
+
+    monaco.editor.defineTheme('vulnlabs-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '60a5fa' },
+        { token: 'string', foreground: 'fcd34d' },
+        { token: 'number', foreground: 'f472b6' },
+        { token: 'identifier', foreground: 'e2e8f0' },
+      ],
+      colors: {
+        'editor.background': '#0b1020',
+        'editor.foreground': '#e2e8f0',
+        'editorLineNumber.foreground': '#475569',
+        'editorLineNumber.activeForeground': '#93c5fd',
+        'editor.selectionBackground': '#1e3a8a40',
+        'editor.inactiveSelectionBackground': '#1e3a8a20',
+        'editor.lineHighlightBackground': '#1d2740',
+        'editorCursor.foreground': '#f8fafc',
+        'editorSuggestWidget.background': '#0f172a',
+        'editorSuggestWidget.border': '#1d2a4a',
+        'editorSuggestWidget.selectedBackground': '#1d4ed810',
+        'editorMarkerNavigation.background': '#111827',
+      },
+    })
+  }, [monaco])
+
+  const patterns = useMemo(
+    () => ({
+      stringConcat: /\+\s*\w+/,
+      osSystem: /os\.system\s*\(/,
+      shellTrue: /subprocess\.(run|popen|call)[^)]*shell\s*=\s*True/i,
+      execEval: /\b(exec|eval)\s*\(/,
+    }),
+    [],
+  )
+
+  const applyHeuristicMarkers = useCallback(() => {
+    const monacoInstance = monacoRef.current
+    const editor = editorRef.current
+    if (!monacoInstance || !editor) return
+
+    const model = editor.getModel()
+    if (!model) return
+
+    const code = model.getValue()
+    const lines = code.split(/\r?\n/)
+    const markers: import('monaco-editor').editor.IMarkerData[] = []
+
+    const pushMarker = (
+      lineNumber: number,
+      startColumn: number,
+      endColumn: number,
+      message: string,
+      severity: import('monaco-editor').MarkerSeverity = monacoInstance.MarkerSeverity.Warning,
+    ) => {
+      markers.push({
+        startLineNumber: lineNumber,
+        endLineNumber: lineNumber,
+        startColumn,
+        endColumn,
+        message,
+        severity,
+        source: 'VulnLabs heuristics',
+      })
+    }
+
+    lines.forEach((line, index) => {
+      const lineNumber = index + 1
+      const normalized = line.toLowerCase()
+
+      if (language === 'python') {
+        if (normalized.includes('select') && /f["']/.test(line) && line.includes('{')) {
+          const indexOfSelect = normalized.indexOf('select')
+          const col = indexOfSelect >= 0 ? indexOfSelect + 1 : 1
+          pushMarker(
+            lineNumber,
+            col,
+            col + 6,
+            'Potential SQL f-string detected. Use parameterized queries instead of string interpolation.',
+          )
+        } else if (normalized.includes('select') && patterns.stringConcat.test(line)) {
+          const concatIndex = line.indexOf('+')
+          const col = concatIndex >= 0 ? concatIndex + 1 : 1
+          pushMarker(
+            lineNumber,
+            col,
+            col + 1,
+            'SQL string concatenation detected. Prefer prepared statements with bind parameters.',
+          )
+        }
+
+        if (patterns.osSystem.test(line)) {
+          const systemIndex = normalized.indexOf('os.system')
+          const col = systemIndex >= 0 ? systemIndex + 1 : 1
+          pushMarker(
+            lineNumber,
+            col,
+            col + 'os.system'.length,
+            "Call to os.system detected. Consider using subprocess without shell access.",
+          )
+        }
+
+        if (patterns.shellTrue.test(line)) {
+          const col = line.toLowerCase().indexOf('shell') + 1 || 1
+          pushMarker(
+            lineNumber,
+            col,
+            col + 'shell'.length,
+            "subprocess invoked with shell=True. This is vulnerable to command injection.",
+            monacoInstance.MarkerSeverity.Error,
+          )
+        }
+
+        if (patterns.execEval.test(line)) {
+          const col = line.toLowerCase().indexOf('exec') + 1 || line.toLowerCase().indexOf('eval') + 1 || 1
+          pushMarker(
+            lineNumber,
+            col,
+            col + 4,
+            'Use of exec/eval detected. Avoid executing dynamic code from user input.',
+          )
+        }
+      }
+    })
+
+    monacoInstance.editor.setModelMarkers(model, 'vulnlabs-heuristics', markers)
+  }, [language, patterns])
+
+  useEffect(() => {
+    if (!monaco) return
+    monacoRef.current = monaco
+  }, [monaco])
+
+  useEffect(() => {
+    applyHeuristicMarkers()
+  }, [value, language, applyHeuristicMarkers])
+
+  const handleMount = (editor: CodeEditor, monacoInstance: Monaco) => {
+    editorRef.current = editor
+    monacoRef.current = monacoInstance
+    editor.updateOptions({
+      formatOnPaste: true,
+      formatOnType: true,
+      quickSuggestions: true,
+      suggestOnTriggerCharacters: true,
+      tabCompletion: 'on',
+    })
+    applyHeuristicMarkers()
   }
 
   return (
@@ -16,7 +178,8 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
       language={language}
       value={value}
       onChange={handleChange}
-      theme="vs-dark"
+      onMount={handleMount}
+      theme="vulnlabs-dark"
       height="360px"
       options={{
         minimap: { enabled: false },
@@ -31,6 +194,16 @@ export default function MonacoCodeEditor({ value, language = 'python', onChange 
         padding: {
           top: 16,
           bottom: 16,
+        },
+        scrollbar: {
+          verticalScrollbarSize: 8,
+          horizontalScrollbarSize: 8,
+        },
+        glyphMargin: true,
+        renderWhitespace: 'boundary',
+        folding: true,
+        guides: {
+          indentation: true,
         },
       }}
     />
