@@ -6,11 +6,11 @@
 - [x] Add submission endpoint storing pending fixes.
 - [x] Provide submission retrieval endpoints.
 - [x] Implement basic heuristic scoring for initial challenges.
-- [ ] Implement full scoring workflow (static analysis + sandbox execution).
-  - Current heuristics act as lightweight guards until full pipeline lands.
+- [x] Implement full scoring workflow (static analysis + sandbox execution).
+  - Heuristics, Semgrep/Bandit, and sandbox checks run asynchronously via the worker.
 - [x] Integrate static analysis (Semgrep/Bandit) pipeline for submission scoring.
 - [ ] Wire optional container sandbox execution flow.
-- [ ] Add automated tests covering challenge retrieval and scoring logic.
+- [x] Add automated tests covering challenge retrieval and scoring logic.
 
 ## Available Endpoints
 
@@ -33,6 +33,8 @@
 | `VULNLABS_DATABASE_URL` | SQLite file under `backend/data` | Connection string for persistence layer. |
 | `VULNLABS_LOG_LEVEL` | `INFO` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, etc.). |
 | `VULNLABS_SEMGREP_RULES_ROOT` | `backend/static_analysis/semgrep` | Location of Semgrep rule packs. |
+| `VULNLABS_SEMGREP_BINARY` | `semgrep` | Path to the Semgrep CLI binary. |
+| `VULNLABS_SEMGREP_TIMEOUT_SECONDS` | `20` | Maximum time Semgrep is allowed to scan a snippet. |
 | `VULNLABS_BANDIT_BINARY` | `bandit` | Path to Bandit CLI. |
 | `VULNLABS_BANDIT_TIMEOUT_SECONDS` | `10` | Max execution time for Bandit runs. |
 | `VULNLABS_BANDIT_SEVERITY` | `LOW` | Minimum severity Bandit should report. |
@@ -55,8 +57,10 @@ The scoring pipeline now runs asynchronously in the background. Submissions are 
 
 - Background worker: processes queued submissions and updates their status (`pending` → `running` → `passed/failed/error`).
 - Semgrep rules (if the `semgrep` CLI is installed) add additional warnings to the submission feedback payload.
+  - Install with `python3 -m pip install --user semgrep` or follow upstream instructions, and adjust `VULNLABS_SEMGREP_BINARY` if the binary lives outside your `PATH`.
 - Bandit (if installed) runs against snippets to surface Python security issues with severity/confidence thresholds.
 - Sandbox execution: defaults to a local Python subprocess that compiles the code; set `VULNLABS_SANDBOX_DRIVER=docker` to run the same check inside an isolated Docker container (memory/time limits applied).
+  - Snippets are wrapped in a dummy function prior to compilation so top-level `return` statements from challenges are accepted.
   - If Docker is unavailable the run fails gracefully and the submission is marked with a sandbox error issue.
 
 Heuristic checks currently look for:
@@ -69,7 +73,13 @@ Submissions failing these checks are marked `failed` with feedback; other challe
 
 ## Tests
 
-Run the API test suite (uses a temporary SQLite database) with:
+Install test tooling (once per environment):
+
+```bash
+python3 -m pip install --user pytest
+```
+
+Run the API and sandbox regression tests (use a temporary SQLite database) with:
 
 ```bash
 pytest backend/tests
