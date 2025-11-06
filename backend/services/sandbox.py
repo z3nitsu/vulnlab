@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import subprocess
 import tempfile
+import textwrap
 from pathlib import Path
 from typing import Tuple
 
@@ -64,10 +65,12 @@ class LocalSandboxExecutor(SandboxExecutor):
                     "Sandbox rejected code containing potentially dangerous system calls.",
                 )
 
+        wrapped_code = _wrap_submission_for_sandbox(code)
+
         with tempfile.TemporaryDirectory(prefix="vulnlabs_sandbox_") as tmpdir:
             tmp_path = Path(tmpdir)
             code_path = tmp_path / "submission.py"
-            code_path.write_text(code, encoding="utf-8")
+            code_path.write_text(wrapped_code, encoding="utf-8")
 
             compile_cmd = [
                 self.python_executable,
@@ -86,7 +89,6 @@ class LocalSandboxExecutor(SandboxExecutor):
                 stderr = compile_proc.stderr.strip() or "Syntax error during compilation."
                 return False, f"Sandbox compilation failed: {stderr}"
             return True, "Sandbox compilation succeeded."
-
 
 class DockerSandboxExecutor(SandboxExecutor):
     """Sandbox executor that runs code inside a Docker container."""
@@ -118,10 +120,12 @@ class DockerSandboxExecutor(SandboxExecutor):
                     "Sandbox rejected code containing disallowed patterns.",
                 )
 
+        wrapped_code = _wrap_submission_for_sandbox(code)
+
         with tempfile.TemporaryDirectory(prefix="vulnlabs_sandbox_") as tmpdir:
             tmp_path = Path(tmpdir)
             code_path = tmp_path / "submission.py"
-            code_path.write_text(code, encoding="utf-8")
+            code_path.write_text(wrapped_code, encoding="utf-8")
 
             docker_cmd = [
                 self.docker_binary,
@@ -160,3 +164,16 @@ class DockerSandboxExecutor(SandboxExecutor):
                 return False, message or "Docker sandbox execution failed."
 
             return True, "Docker sandbox compilation succeeded."
+
+def _wrap_submission_for_sandbox(code: str) -> str:
+    """Wrap user-provided snippet in a function for compilation tests."""
+    stripped = code.rstrip()
+    if not stripped:
+        body = "    pass\n"
+    else:
+        body = textwrap.indent(stripped + "\n", "    ")
+    return (
+        "# Auto-generated wrapper for sandbox validation\n"
+        "def __vulnlabs_submission__(db, request):\n"
+        f"{body}"
+    )
