@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChallengeSidebar } from './components/ChallengeSidebar'
 import { ChallengeSummaryPanel } from './components/ChallengeSummaryPanel'
 import { EditorPanel } from './components/EditorPanel'
-import { InsightsPanel } from './components/InsightsPanel'
 import {
   createSubmission,
   fetchChallenge,
@@ -18,8 +17,6 @@ import type {
 } from './types'
 
 const POLL_INTERVAL_MS = 1500
-const DEFAULT_HANDLE = import.meta.env.VITE_DEFAULT_USER_HANDLE ?? 'coder1'
-
 function App() {
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([])
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
@@ -30,9 +27,7 @@ function App() {
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [pendingStatus, setPendingStatus] = useState<SubmissionStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [userHandle, setUserHandle] = useState(
-    () => localStorage.getItem('vulnlabs.handle') ?? DEFAULT_HANDLE
-  )
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const pollerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -42,10 +37,6 @@ function App() {
       pollerRef.current = null
     }
   }, [])
-
-  useEffect(() => {
-    localStorage.setItem('vulnlabs.handle', userHandle)
-  }, [userHandle])
 
   useEffect(() => {
     const loadChallenges = async () => {
@@ -123,7 +114,6 @@ function App() {
       const result = await createSubmission({
         challenge_slug: selectedSlug,
         code,
-        user_handle: userHandle || undefined,
       })
       setSubmission(result)
       setPendingStatus(result.status === 'pending' ? result.status : null)
@@ -136,7 +126,7 @@ function App() {
       setPendingStatus(null)
       setError('Submission failed. Please confirm the backend API key and server are configured.')
     }
-  }, [selectedSlug, code, userHandle, pollSubmission])
+  }, [selectedSlug, code, pollSubmission])
 
   useEffect(() => clearPoller, [clearPoller])
 
@@ -146,9 +136,20 @@ function App() {
     <div className="app">
       <header className="app__header">
         <div className="container header__content">
-          <div>
-            <span className="brand-chip">VulnLabs</span>
-            <p className="muted small">Secure coding arena for remediating real-world bugs.</p>
+          <div className="header__brand">
+            <button
+              type="button"
+              className="menu-button"
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Open challenge catalog"
+              aria-expanded={isSidebarOpen}
+            >
+              <span />
+            </button>
+            <div>
+              <span className="brand-chip">VulnLabs</span>
+              <p className="muted small">Secure coding arena for remediating real-world bugs.</p>
+            </div>
           </div>
           {detailLoading && (
             <div className="header__loading">
@@ -173,22 +174,9 @@ function App() {
       )}
 
       <main className="container layout">
-        <ChallengeSidebar
-          challenges={challenges}
-          selectedSlug={selectedSlug}
-          onSelect={setSelectedSlug}
-          isLoading={listLoading}
-        />
-
         <div className="workspace">
           <div className="workspace__panel workspace__panel--left">
             <ChallengeSummaryPanel challenge={challengeDetail} isLoading={detailLoading} />
-            <InsightsPanel
-              challenge={challengeDetail}
-              submission={submission}
-              userHandle={userHandle}
-              onHandleChange={setUserHandle}
-            />
           </div>
           <div className="workspace__panel workspace__panel--right">
             <EditorPanel
@@ -203,6 +191,25 @@ function App() {
             />
           </div>
         </div>
+
+        {isSidebarOpen ? (
+          <>
+            <div className="drawer-overlay" onClick={() => setIsSidebarOpen(false)} />
+            <div className="sidebar-drawer">
+              <ChallengeSidebar
+                challenges={challenges}
+                selectedSlug={selectedSlug}
+                onSelect={(slug) => {
+                  setSelectedSlug(slug)
+                  setIsSidebarOpen(false)
+                }}
+                isLoading={listLoading}
+                className="sidebar--drawer"
+                onClose={() => setIsSidebarOpen(false)}
+              />
+            </div>
+          </>
+        ) : null}
       </main>
     </div>
   )

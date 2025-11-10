@@ -1,13 +1,13 @@
 import type { ComponentType } from 'react'
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react'
-import type { ChallengeDetail, Submission } from '../types'
+import type { Submission, SubmissionStatus } from '../types'
 import { getStatusMeta } from '../lib/status'
 
 type Props = {
-  challenge: ChallengeDetail | null
   submission: Submission | null
-  userHandle: string
-  onHandleChange: (value: string) => void
+  pendingStatus: SubmissionStatus | null
+  className?: string
+  variant?: 'panel' | 'inline'
 }
 
 type IconType = ComponentType<{ className?: string; size?: number }>
@@ -18,56 +18,41 @@ const severityIcon: Record<string, IconType> = {
   info: CheckCircle2,
 }
 
-export function InsightsPanel({ challenge, submission, userHandle, onHandleChange }: Props) {
+export function TestResultPanel({ submission, pendingStatus, className, variant = 'panel' }: Props) {
   const issues = submission?.issues ?? []
-  const latestStatus = getStatusMeta(submission?.status ?? null)
+  const score = submission?.score
+  const feedback = submission?.feedback
+  const statusMeta = getStatusMeta(pendingStatus ?? submission?.status ?? null)
+  const hasResults = Boolean(submission)
+  const isPending = Boolean(pendingStatus)
+
+  const containerBaseClass = variant === 'panel' ? 'panel insights' : 'test-result-inline'
+  const containerClass = [containerBaseClass, className].filter(Boolean).join(' ')
+  const Container: React.ElementType = variant === 'panel' ? 'aside' : 'section'
 
   return (
-    <aside className="panel insights">
-      <section className="insights__block">
-        <h3 className="eyebrow">Identity</h3>
-        <p className="muted small">Personalize submissions to track your progress across runs.</p>
-        <label className="field">
-          <span className="field__label">User handle</span>
-          <input
-            className="field__input"
-            type="text"
-            value={userHandle}
-            placeholder="Anonymous"
-            onChange={(event) => onHandleChange(event.target.value)}
-          />
-        </label>
-      </section>
-
-      <section className="insights__block">
-        <h3 className="eyebrow">Acceptance criteria</h3>
-        {challenge?.acceptance_criteria?.length ? (
-          <ul className="list">
-            {challenge.acceptance_criteria.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted small">No acceptance criteria defined for this challenge yet.</p>
-        )}
-      </section>
-
+    <Container className={containerClass}>
       <section className="insights__block">
         <div className="insights__header">
-          <h3 className="eyebrow">Latest submission</h3>
-          {latestStatus && (
-            <span className={`status-badge status-badge--${latestStatus.tone}`}>{latestStatus.label}</span>
-          )}
+          <h3 className="eyebrow">Test result</h3>
+          {statusMeta ? (
+            <span className={`status-badge status-badge--${statusMeta.tone}`}>
+              {isPending && <span className="status-badge__spinner" />}
+              {statusMeta.label}
+            </span>
+          ) : null}
         </div>
 
-        {submission ? (
+        {hasResults ? (
           <div className="insights__content">
-            {submission.score !== null && (
+            {isPending ? <p className="muted small">Analyzers are still running. Results will update automatically.</p> : null}
+            {score !== null && score !== undefined ? (
               <p className="small">
-                <span className="small bold">Score:</span> {submission.score}
+                <span className="small bold">Score:</span> {score}
               </p>
-            )}
-            {submission.feedback && <p className="feedback">{submission.feedback}</p>}
+            ) : null}
+
+            {feedback ? <p className="feedback">{feedback}</p> : null}
 
             <div className="issues">
               {issues.length ? (
@@ -84,25 +69,16 @@ export function InsightsPanel({ challenge, submission, userHandle, onHandleChang
                   )
                 })
               ) : (
-                <p className="muted small">No analyzer feedback yet.</p>
+                <p className="muted small">No analyzer findings for this run.</p>
               )}
             </div>
           </div>
         ) : (
-          <p className="muted small">Submit your fix to see analyzer feedback and scoring results.</p>
+          <p className="muted small">
+            Submit your fix to run analyzers and view scoring feedback. Results will appear here.
+          </p>
         )}
       </section>
-
-      {challenge?.hints?.length ? (
-        <section className="insights__block">
-          <h3 className="eyebrow">Hints</h3>
-          <ul className="list">
-            {challenge.hints.map((hint, index) => (
-              <li key={index}>{hint}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </aside>
+    </Container>
   )
 }

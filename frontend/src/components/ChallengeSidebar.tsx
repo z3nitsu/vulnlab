@@ -5,19 +5,41 @@ type Props = {
   selectedSlug: string | null
   onSelect: (slug: string) => void
   isLoading?: boolean
+  className?: string
+  onClose?: () => void
 }
 
-export function ChallengeSidebar({ challenges, selectedSlug, onSelect, isLoading }: Props) {
+export function ChallengeSidebar({
+  challenges,
+  selectedSlug,
+  onSelect,
+  isLoading,
+  className,
+  onClose,
+}: Props) {
   const hasChallenges = challenges.length > 0
+  const containerClassName = ['panel sidebar', className].filter(Boolean).join(' ')
 
   return (
-    <aside className="panel sidebar">
+    <aside className={containerClassName}>
       <div className="panel__header">
         <div>
           <p className="eyebrow">Challenge Catalog</p>
           <h2 className="panel__title">Choose a scenario</h2>
         </div>
-        {isLoading && <span className="muted">Loading…</span>}
+        <div className="sidebar__header-actions">
+          {isLoading && <span className="muted small">Loading…</span>}
+          {onClose ? (
+            <button
+              type="button"
+              className="ghost-button ghost-button--icon"
+              onClick={onClose}
+              aria-label="Close catalog"
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {hasChallenges ? (

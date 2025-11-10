@@ -4,9 +4,10 @@ type Props = {
   value: string
   language?: string
   onChange: (value: string) => void
+  height?: string | number
 }
 
-export default function MonacoCodeEditor({ value, onChange, language }: Props) {
+export default function MonacoCodeEditor({ value, onChange, language, height = '100%' }: Props) {
   const handleChange = (nextValue: string | undefined) => {
     onChange(nextValue ?? '')
   }
@@ -17,7 +18,7 @@ export default function MonacoCodeEditor({ value, onChange, language }: Props) {
       onChange={handleChange}
       language={language ?? 'python'}
       theme="vs-dark"
-      height="420px"
+      height={height}
       options={{
         minimap: { enabled: false },
         fontSize: 14,
